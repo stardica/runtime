@@ -1,0 +1,18 @@
+How to set up eclipse to compile and run m2s-cpu
+
+(1) Start a new c project drag/import all of the files folders.
+
+(2) Go to Build Artifact tab and from Artifcat Type select the Static Library.
+	(a) type the name "m2s-opencl"
+	(b) extension "so"
+	(c) prefix "lib"
+
+(3) Go to project properties add the following compiler settings:
+	(a) Add the path to runtime/src in the includes list. Example -l/home/stardica/Desktop/runtime/src
+	(b) Add -pthread -D_GNU_SOURCE to miscellaneous >> other flags
+
+(4) Go to project properties add the following linker library settings:
+	(a) pthread, dl, and rt
+
+Don't forget to add to scripts
+	(a) export LD_LIBRARY_PATH=/home/stardica/Desktop/runtime/Release
