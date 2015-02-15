@@ -46,8 +46,7 @@ struct opencl_mem_t *opencl_mem_create(void)
 	mem = xcalloc(1, sizeof(struct opencl_mem_t));
 	
 	/* Register OpenCL object */
-	opencl_object_create(mem, OPENCL_OBJECT_MEM,
-		(opencl_object_free_func_t) opencl_mem_free);
+	opencl_object_create(mem, OPENCL_OBJECT_MEM, (opencl_object_free_func_t) opencl_mem_free);
 
 	/* Return */
 	return mem;
@@ -79,19 +78,13 @@ void *opencl_mem_get_buffer(struct opencl_mem_t *mem)
 }
 
 
-
-
 /*
  * OpenCL API Functions
  */
 
-cl_mem clCreateBuffer(
-	cl_context context,
-	cl_mem_flags flags,
-	size_t size,
-	void *host_ptr,
-	cl_int *errcode_ret)
+cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void *host_ptr, cl_int *errcode_ret)
 {
+
 	struct opencl_device_t *device;
 	struct opencl_mem_t *mem;
 
@@ -112,8 +105,7 @@ cl_mem clCreateBuffer(
 	}
 
 	/* Check combination of arguments */
-	if (((flags & CL_MEM_USE_HOST_PTR) ||
-		(flags & CL_MEM_COPY_HOST_PTR)) && !host_ptr)
+	if (((flags & CL_MEM_USE_HOST_PTR) || (flags & CL_MEM_COPY_HOST_PTR)) && !host_ptr)
 	{
 		if (errcode_ret)
 			*errcode_ret = CL_INVALID_HOST_PTR;
@@ -154,12 +146,7 @@ cl_mem clCreateBuffer(
 }
 
 
-cl_mem clCreateSubBuffer(
-	cl_mem buffer,
-	cl_mem_flags flags,
-	cl_buffer_create_type buffer_create_type,
-	const void *buffer_create_info,
-	cl_int *errcode_ret)
+cl_mem clCreateSubBuffer(cl_mem buffer, cl_mem_flags flags, cl_buffer_create_type buffer_create_type, const void *buffer_create_info, cl_int *errcode_ret)
 {
 	__OPENCL_NOT_IMPL__
 	return 0;

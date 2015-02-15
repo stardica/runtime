@@ -115,8 +115,7 @@ static void opencl_object_list_dump(FILE *f)
  * Public Functions
  */
 
-struct opencl_object_t *opencl_object_create(void *data, enum opencl_object_type_t type,
-	opencl_object_free_func_t free_func)
+struct opencl_object_t *opencl_object_create(void *data, enum opencl_object_type_t type, opencl_object_free_func_t free_func)
 {
 	struct opencl_object_t *object;
 

@@ -180,8 +180,7 @@ struct opencl_si_kernel_t *opencl_si_kernel_create(
 	}
 
 	/* Create kernel object in driver */
-	kernel->id = syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_kernel_create,
-			program->id, func_name);
+	kernel->id = syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_kernel_create, program->id, func_name);
 
 	/* Dump debug info and return */
 	opencl_debug("[%s] kernel = %p", __FUNCTION__, (void*)kernel);
@@ -393,8 +392,7 @@ void opencl_si_ndrange_init(struct opencl_si_ndrange_t *ndrange)
 		ndrange->table_ptr, ndrange->cb_ptr);
 }
 
-void opencl_si_ndrange_run_partial(struct opencl_si_ndrange_t *ndrange,
-	unsigned int *work_group_start, unsigned int *work_group_count)
+void opencl_si_ndrange_run_partial(struct opencl_si_ndrange_t *ndrange, unsigned int *work_group_start, unsigned int *work_group_count)
 {
 	int max_work_groups_to_send;
 	/* 
@@ -408,16 +406,11 @@ void opencl_si_ndrange_run_partial(struct opencl_si_ndrange_t *ndrange,
 
 	/* Ask the driver how many work groups it can buffer */
 	/* Send work groups to the driver */
-	syscall(OPENCL_SYSCALL_CODE,
-		opencl_abi_si_ndrange_get_num_buffer_entries,
-		&max_work_groups_to_send);
+	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_ndrange_get_num_buffer_entries, &max_work_groups_to_send);
 
 	/* assert(max_work_groups_to_send > num_groups); */
 
-	syscall(OPENCL_SYSCALL_CODE, 
-		opencl_abi_si_ndrange_send_work_groups, 
-		&work_group_start[0], &work_group_count[0],
-		ndrange->group_count);
+	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_ndrange_send_work_groups, &work_group_start[0], &work_group_count[0], ndrange->group_count);
 }
 
 void opencl_si_ndrange_run(struct opencl_si_ndrange_t *ndrange)
@@ -443,8 +436,7 @@ void opencl_si_ndrange_run(struct opencl_si_ndrange_t *ndrange)
 	}
 
 	/* Run all of the work groups */
-	opencl_si_ndrange_run_partial(ndrange, work_group_start,
-		work_group_count);
+	opencl_si_ndrange_run_partial(ndrange, work_group_start, work_group_count);
 
 
 	/* Wait for the nd-range to complete */

@@ -103,8 +103,7 @@ void opencl_command_queue_free(struct opencl_command_queue_t *command_queue)
 }
 
 
-void opencl_command_queue_enqueue(struct opencl_command_queue_t *command_queue, 
-	struct opencl_command_t *command)
+void opencl_command_queue_enqueue(struct opencl_command_queue_t *command_queue, struct opencl_command_t *command)
 {
 	struct timespec t;
 
@@ -393,8 +392,7 @@ cl_int clEnqueueWriteBuffer(
 		return status;
 
 	/* Create command */
-	command = opencl_command_create_mem_write(buffer->device_ptr + offset, (void *) ptr, cb,
-			command_queue, event, num_events_in_wait_list, (cl_event *) event_wait_list);
+	command = opencl_command_create_mem_write(buffer->device_ptr + offset, (void *) ptr, cb, command_queue, event, num_events_in_wait_list, (cl_event *) event_wait_list);
 	opencl_command_queue_enqueue(command_queue, command);
 
 	/* If it is a blocking write, wait for command queue completion */

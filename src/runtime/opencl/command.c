@@ -286,10 +286,7 @@ struct opencl_command_t *opencl_command_create_mem_write(
 	struct opencl_command_t *command;
 
 	/* Initialize */
-	command = opencl_command_create(opencl_command_mem_write,
-			opencl_command_run_mem_write,
-			command_queue, done_event_ptr, num_wait_events,
-			wait_events);
+	command = opencl_command_create(opencl_command_mem_write, opencl_command_run_mem_write, command_queue, done_event_ptr, num_wait_events, wait_events);
 	command->mem_write.device_ptr = device_ptr;
 	command->mem_write.host_ptr = host_ptr;
 	command->mem_write.size = size;

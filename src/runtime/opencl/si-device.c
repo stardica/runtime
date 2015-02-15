@@ -113,54 +113,31 @@ struct opencl_si_device_t *opencl_si_device_create(struct opencl_device_t *paren
 	parent->arch_device_free_func = (opencl_arch_device_free_func_t)
 			opencl_si_device_free;
 
-	parent->arch_device_mem_alloc_func = 
-		(opencl_arch_device_mem_alloc_func_t)
-		opencl_si_device_mem_alloc;
-	parent->arch_device_mem_free_func = (opencl_arch_device_mem_free_func_t)
-		opencl_si_device_mem_free;
-	parent->arch_device_mem_read_func = (opencl_arch_device_mem_read_func_t)
-		opencl_si_device_mem_read;
-	parent->arch_device_mem_write_func = 
-		(opencl_arch_device_mem_write_func_t)
-		opencl_si_device_mem_write;
-	parent->arch_device_mem_copy_func = (opencl_arch_device_mem_copy_func_t)
-		opencl_si_device_mem_copy;
-	parent->arch_device_preferred_workgroups_func = 
-		(opencl_arch_device_preferred_workgroups_func_t)
-		opencl_si_device_preferred_workgroups;
+	parent->arch_device_mem_alloc_func = (opencl_arch_device_mem_alloc_func_t) opencl_si_device_mem_alloc;
+	parent->arch_device_mem_free_func = (opencl_arch_device_mem_free_func_t) opencl_si_device_mem_free;
+	parent->arch_device_mem_read_func = (opencl_arch_device_mem_read_func_t) opencl_si_device_mem_read;
+	parent->arch_device_mem_write_func = (opencl_arch_device_mem_write_func_t) opencl_si_device_mem_write;
+	parent->arch_device_mem_copy_func = (opencl_arch_device_mem_copy_func_t) opencl_si_device_mem_copy;
+	parent->arch_device_preferred_workgroups_func = (opencl_arch_device_preferred_workgroups_func_t) opencl_si_device_preferred_workgroups;
 
 	/* Call-back functions for kernel */
-	parent->arch_kernel_create_func = (opencl_arch_kernel_create_func_t)
-		opencl_si_kernel_create;
-	parent->arch_kernel_free_func = (opencl_arch_kernel_free_func_t)
-		opencl_si_kernel_free;
-	parent->arch_kernel_set_arg_func = (opencl_arch_kernel_set_arg_func_t)
-		opencl_si_kernel_set_arg;
+	parent->arch_kernel_create_func = (opencl_arch_kernel_create_func_t) opencl_si_kernel_create;
+	parent->arch_kernel_free_func = (opencl_arch_kernel_free_func_t) opencl_si_kernel_free;
+	parent->arch_kernel_set_arg_func = (opencl_arch_kernel_set_arg_func_t) opencl_si_kernel_set_arg;
 
 	/* Call-back functions for ND-Range */
-	parent->arch_ndrange_create_func = (opencl_arch_ndrange_create_func_t)
-		opencl_si_ndrange_create;
-	parent->arch_ndrange_free_func = (opencl_arch_ndrange_free_func_t) 
-		opencl_si_ndrange_free;
-	parent->arch_ndrange_init_func = (opencl_arch_ndrange_init_func_t) 
-		opencl_si_ndrange_init;
-	parent->arch_ndrange_run_func = (opencl_arch_ndrange_run_func_t) 
-		opencl_si_ndrange_run;
-	parent->arch_ndrange_run_partial_func = 
-		(opencl_arch_ndrange_run_partial_func_t) 
-		opencl_si_ndrange_run_partial;
+	parent->arch_ndrange_create_func = (opencl_arch_ndrange_create_func_t) opencl_si_ndrange_create;
+	parent->arch_ndrange_free_func = (opencl_arch_ndrange_free_func_t) opencl_si_ndrange_free;
+	parent->arch_ndrange_init_func = (opencl_arch_ndrange_init_func_t) opencl_si_ndrange_init;
+	parent->arch_ndrange_run_func = (opencl_arch_ndrange_run_func_t) opencl_si_ndrange_run;
+	parent->arch_ndrange_run_partial_func = (opencl_arch_ndrange_run_partial_func_t) opencl_si_ndrange_run_partial;
 	
 	/* Call-back functions for program */
-	parent->arch_program_create_func = (opencl_arch_program_create_func_t)
-		opencl_si_program_create;
-	parent->arch_program_free_func = (opencl_arch_program_free_func_t)
-		opencl_si_program_free;
-	parent->arch_program_valid_binary_func = 
-		(opencl_arch_program_valid_binary_func_t)
-		opencl_si_program_valid_binary;
+	parent->arch_program_create_func = (opencl_arch_program_create_func_t) opencl_si_program_create;
+	parent->arch_program_free_func = (opencl_arch_program_free_func_t) opencl_si_program_free;
+	parent->arch_program_valid_binary_func = (opencl_arch_program_valid_binary_func_t) opencl_si_program_valid_binary;
 
-	opencl_debug("[%s] opencl_si_device_t device = %p", __FUNCTION__, 
-		device);
+	opencl_debug("[%s] opencl_si_device_t device = %p", __FUNCTION__, device);
 
 	/* Return */
 	return device;
@@ -173,14 +150,12 @@ void opencl_si_device_free(struct opencl_si_device_t *device)
 }
 
 
-void *opencl_si_device_mem_alloc(struct opencl_si_device_t *device,
-		unsigned int size)
+void *opencl_si_device_mem_alloc(struct opencl_si_device_t *device, unsigned int size)
 {
 	void *device_ptr;
 
 	/* Request device memory to driver */
-	device_ptr = (void *) syscall(OPENCL_SYSCALL_CODE,
-			opencl_abi_si_mem_alloc, size);
+	device_ptr = (void *) syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_mem_alloc, size);
 
 	return device_ptr;
 }
@@ -198,13 +173,11 @@ void opencl_si_device_mem_read(struct opencl_si_device_t *device,
 		void *host_ptr, void *device_ptr, unsigned int size)
 {
 	/* Invoke 'mem_read' ABI call */
-	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_mem_read,
-			host_ptr, device_ptr, size);
+	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_mem_read, host_ptr, device_ptr, size);
 }
 
 
-void opencl_si_device_mem_write(struct opencl_si_device_t *device,
-		void *device_ptr, void *host_ptr, unsigned int size)
+void opencl_si_device_mem_write(struct opencl_si_device_t *device, void *device_ptr, void *host_ptr, unsigned int size)
 {
 	/* Invoke 'mem_write' ABI call */
 	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_mem_write, device_ptr, host_ptr, size);
