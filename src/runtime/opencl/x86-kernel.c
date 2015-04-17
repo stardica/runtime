@@ -145,8 +145,7 @@ static int opencl_x86_kernel_arg_is_vector(enum opencl_x86_kernel_arg_type_t arg
 }
 
 
-static void *opencl_x86_kernel_get_func_info(void *dlhandle,
-		const char *func_name, size_t **metadata)
+static void *opencl_x86_kernel_get_func_info(void *dlhandle, const char *func_name, size_t **metadata)
 {
 	void *addr;
 	char *full_name;

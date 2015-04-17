@@ -333,8 +333,8 @@ struct opencl_ndrange_t *opencl_ndrange_create(
 	ndrange->device = device;
 	ndrange->kernel = kernel;
 
-	opencl_debug("[%s] creating an nd-range for %s", __FUNCTION__, 
-		device->name);
+	opencl_debug("[%s] creating an nd-range for %s", __FUNCTION__, device->name);
+
 	LIST_FOR_EACH(kernel->entry_list, i)
 	{
 		kernel_entry = list_get(kernel->entry_list, i);
@@ -343,9 +343,7 @@ struct opencl_ndrange_t *opencl_ndrange_create(
 	}
 	assert(arch_kernel);
 
-	ndrange->arch_ndrange = device->arch_ndrange_create_func(ndrange,
-		arch_kernel, work_dim, global_work_offset, global_work_size,
-		local_work_size, 0);
+	ndrange->arch_ndrange = device->arch_ndrange_create_func(ndrange, arch_kernel, work_dim, global_work_offset, global_work_size, local_work_size, 0);
 
 	return ndrange;
 }

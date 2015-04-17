@@ -51,8 +51,7 @@ struct opencl_x86_program_t *opencl_x86_program_create(
 	program->device = device;
 
 	/* Load ELF binary */
-	elf_file = elf_file_create_from_buffer((void *) binary, length,
-			"OpenCL binary");
+	elf_file = elf_file_create_from_buffer((void *) binary, length, "OpenCL binary");
 
 	/* Find '.text' section */
 	found = 0;

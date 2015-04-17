@@ -131,7 +131,8 @@ struct opencl_si_device_t *opencl_si_device_create(struct opencl_device_t *paren
 	parent->arch_ndrange_init_func = (opencl_arch_ndrange_init_func_t) opencl_si_ndrange_init;
 	parent->arch_ndrange_run_func = (opencl_arch_ndrange_run_func_t) opencl_si_ndrange_run;
 	parent->arch_ndrange_run_partial_func = (opencl_arch_ndrange_run_partial_func_t) opencl_si_ndrange_run_partial;
-	
+	//EVICE_MAX_CLOCK_FREQUENCY = 0
+
 	/* Call-back functions for program */
 	parent->arch_program_create_func = (opencl_arch_program_create_func_t) opencl_si_program_create;
 	parent->arch_program_free_func = (opencl_arch_program_free_func_t) opencl_si_program_free;
