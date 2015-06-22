@@ -106,10 +106,21 @@ struct opencl_platform_t *opencl_platform_create(void)
 	/* Initialize device list */
 	platform->device_list = list_create();
 
+
+
+
 	/* Add x86 device */
 	device = opencl_device_create();
+
+
+
 	device->arch_device = opencl_x86_device_create(device);
+
+
+
 	list_add(platform->device_list, device);
+
+
 
 	/* Devices other than x86 CPU are added only on simulated mode */
 	if (!opencl_native_mode)
@@ -165,6 +176,8 @@ cl_int clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platforms, cl_uint 
 	struct opencl_version_t version;
 	int ret;
 
+
+
 	/* Debug */
 	opencl_debug("call '%s'", __FUNCTION__);
 	opencl_debug("\tnum_entries = %d", num_entries);
@@ -175,7 +188,10 @@ cl_int clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platforms, cl_uint 
 	 * the host program. It is checked here whether we're running in native
 	 * or simulation mode. If it's simulation mode, Multi2Sim's version is
 	 * checked for compatibility with the runtime library version. */
+
 	ret = syscall(OPENCL_SYSCALL_CODE, opencl_abi_init, &version);
+
+
 
 	/* If the system call returns error, we are in native mode. */
 	if (ret == -1 && !opencl_native_mode)
@@ -196,9 +212,13 @@ cl_int clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platforms, cl_uint 
 				version.major, version.minor, opencl_err_version);
 	}
 
+
+
 	/* Create platform if it doesn't exist yet */
 	if (!opencl_platform)
 		opencl_platform = opencl_platform_create();
+
+
 
 	/* If an array is passed in, it must have a corresponding length
 	 * and the client must either want a count or a list of platforms */

@@ -506,6 +506,10 @@ struct opencl_x86_device_t *opencl_x86_device_create(struct opencl_device_t *par
 	device->core_done_count = 0;
 	device->set_queue_affinity = 0;
 
+
+
+
+
 	/* Initialize parent device */
 	parent->address_bits = 8 * sizeof (void *);
 	parent->available = CL_TRUE;
@@ -577,6 +581,8 @@ struct opencl_x86_device_t *opencl_x86_device_create(struct opencl_device_t *par
 	parent->type = CL_DEVICE_TYPE_CPU;
 	parent->vendor_id = 0;
 
+
+
 	/* Call-back functions for architecture-specific device */
 	parent->arch_device_free_func =
 			(opencl_arch_device_free_func_t)
@@ -638,6 +644,9 @@ struct opencl_x86_device_t *opencl_x86_device_create(struct opencl_device_t *par
 			(opencl_arch_ndrange_run_partial_func_t)
 			opencl_x86_ndrange_run_partial;
 
+
+
+
 	/* Initialize threads */
 	device->threads = xcalloc(device->num_cores, sizeof(pthread_t));
 	for (i = 0; i < device->num_cores - 1; i++)
@@ -654,6 +663,9 @@ struct opencl_x86_device_t *opencl_x86_device_create(struct opencl_device_t *par
 		CPU_SET(i, &cpu_set);
 		pthread_setaffinity_np(device->threads[i], sizeof cpu_set, &cpu_set);
 	}
+
+	//printf("made it here\n");
+
 	opencl_x86_device_core_init(&device->queue_core);
 
 	opencl_debug("[%s] opencl_x86_device_t device = %p", __FUNCTION__, device);
