@@ -1,0 +1,5 @@
+git init
+git add src/*
+git commit -m "first commit"
+git remote add origin https://github.com/stardica/runtime.git
+git push -u origin master
