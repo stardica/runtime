@@ -55,11 +55,7 @@ static void opencl_command_run_mem_write(struct opencl_command_t *command)
 	struct opencl_device_t *device = command->device;
 
 	assert(device->arch_device_mem_write_func);
-	device->arch_device_mem_write_func(
-			device->arch_device,
-			command->mem_write.device_ptr,
-			command->mem_write.host_ptr,
-			command->mem_write.size);
+	device->arch_device_mem_write_func(device->arch_device, command->mem_write.device_ptr, command->mem_write.host_ptr, command->mem_write.size);
 }
 
 

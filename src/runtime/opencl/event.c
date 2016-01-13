@@ -379,9 +379,9 @@ cl_int clFlush(
 }
 
 
-cl_int clFinish(
-	cl_command_queue command_queue)
-{
+cl_int clFinish(cl_command_queue command_queue){
+
+
 	struct opencl_command_t *command;
 	struct opencl_event_t *event;
 

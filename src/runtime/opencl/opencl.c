@@ -136,14 +136,12 @@ int opencl_is_valid_device_type(cl_device_type device_type)
 }
 
 
-int opencl_event_wait_list_check(
-	unsigned int num_events, 
-	const cl_event *event_wait_list)
-{
+int opencl_event_wait_list_check(unsigned int num_events, const cl_event *event_wait_list){
+
+
 	int i;
 
-	if ((!event_wait_list && num_events) 
-		|| (event_wait_list && !num_events))
+	if ((!event_wait_list && num_events) || (event_wait_list && !num_events))
 		return CL_INVALID_EVENT_WAIT_LIST;
 
 	/* Verify that the parameter list is valid up-front */

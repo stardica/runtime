@@ -162,8 +162,7 @@ void *opencl_si_device_mem_alloc(struct opencl_si_device_t *device, unsigned int
 }
 
 
-void opencl_si_device_mem_free(struct opencl_si_device_t *device,
-		void *ptr)
+void opencl_si_device_mem_free(struct opencl_si_device_t *device, void *ptr)
 {
 	/* Invoke 'mem_free' ABI call */
 	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_mem_free, ptr);

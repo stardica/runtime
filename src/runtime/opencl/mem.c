@@ -114,8 +114,7 @@ cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void 
 
 	/* Get device */
 	if (context->device_list->count != 1)
-		fatal("%s: only supported for contexts with 1 associated device",
-				__FUNCTION__);
+		fatal("%s: only supported for contexts with 1 associated device", __FUNCTION__);
 	device = list_get(context->device_list, 0);
 
 	/* Create memory object */
