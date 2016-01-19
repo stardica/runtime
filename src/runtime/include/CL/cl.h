@@ -1423,8 +1423,8 @@ extern cl_int clReleaseCommandQueue(cl_command_queue);
 extern cl_int
 clGetCommandQueueInfo(cl_command_queue,
 	cl_command_queue_info, size_t, void *, size_t *);
-extern cl_mem
-clCreateBuffer(cl_context, cl_mem_flags, size_t, void *, cl_int *);
+
+extern cl_mem clCreateBuffer(cl_context, cl_mem_flags, size_t, void *, cl_int *, cl_bool);
 
 extern cl_mem
 clCreateSubBuffer(cl_mem,

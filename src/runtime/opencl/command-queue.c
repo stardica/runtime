@@ -319,8 +319,7 @@ cl_int clEnqueueReadBuffer(
 		return status;
 
 	/* Create command */
-	command = opencl_command_create_mem_read(ptr, buffer->device_ptr + offset, cb,
-			command_queue, event, num_events_in_wait_list, (cl_event *) event_wait_list);
+	command = opencl_command_create_mem_read(ptr, buffer->device_ptr + offset, cb, command_queue, event, num_events_in_wait_list, (cl_event *) event_wait_list);
 	opencl_command_queue_enqueue(command_queue, command);
 
 	/* Flush command queue if blocking */

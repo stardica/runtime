@@ -82,7 +82,8 @@ void *opencl_mem_get_buffer(struct opencl_mem_t *mem)
  * OpenCL API Functions
  */
 
-cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void *host_ptr, cl_int *errcode_ret)
+//star made changes here, the cl_bool linked was added.
+cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void *host_ptr, cl_int *errcode_ret, cl_bool linked)
 {
 
 	struct opencl_device_t *device;
@@ -120,9 +121,19 @@ cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void 
 	/* Create memory object */
 	mem = opencl_mem_create();
 
+
 	/* Allocate the memory object in the device. */
 	assert(device->arch_device_mem_alloc_func);
-	mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size);
+
+	//star added link here.
+	if(linked)
+	{
+		mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size, host_ptr);
+	}
+	else
+	{
+		mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size, NULL);
+	}
 	mem->device = device;
 	mem->size = size;
 
@@ -130,6 +141,9 @@ cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void 
 	mem->use_host_ptr = (flags & CL_MEM_USE_HOST_PTR) > 0;
 	if (mem->use_host_ptr)
 		mem->host_ptr = host_ptr;
+
+	/*printf("clCreateBuffer(): creating memory buffer\n");
+	getchar();*/
 
 	/* Copy buffer contents */
 	assert(device->arch_device_mem_write_func);

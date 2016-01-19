@@ -101,8 +101,7 @@ void opencl_debug(char *fmt, ...)
 }
 
 
-cl_int opencl_set_param(const void *src_value, size_t src_size,
-	size_t dest_size, void *dest_value, size_t *size_ret)
+cl_int opencl_set_param(const void *src_value, size_t src_size, size_t dest_size, void *dest_value, size_t *size_ret)
 {
 	assert(src_value);
 	if (dest_value && src_size > dest_size)

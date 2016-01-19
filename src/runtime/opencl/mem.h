@@ -22,6 +22,13 @@
 
 #include <runtime/opencl/opencl.h>
 
+enum ocl_linked_t
+{
+	OCL_NOT_LINKED = 0,
+	OCL_LINKED
+};
+
+
 /* Memory object */
 struct _cl_mem
 {

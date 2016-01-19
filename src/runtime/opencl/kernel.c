@@ -47,8 +47,7 @@ struct opencl_kernel_t *opencl_kernel_create(void)
 	kernel->entry_list = list_create();
 
 	/* Register OpenCL object */
-	opencl_object_create(kernel, OPENCL_OBJECT_KERNEL,
-		(opencl_object_free_func_t) opencl_kernel_free);
+	opencl_object_create(kernel, OPENCL_OBJECT_KERNEL, (opencl_object_free_func_t) opencl_kernel_free);
 
 	/* Return */
 	return kernel;
@@ -75,9 +74,7 @@ void opencl_kernel_free(struct opencl_kernel_t *kernel)
 }
 
 
-struct opencl_kernel_entry_t *opencl_kernel_add(struct opencl_kernel_t *kernel,
-		struct opencl_device_t *device, void *arch_kernel,
-		void *arch_program)
+struct opencl_kernel_entry_t *opencl_kernel_add(struct opencl_kernel_t *kernel, struct opencl_device_t *device, void *arch_kernel, void *arch_program)
 {
 	struct opencl_kernel_entry_t *entry;
 
@@ -99,11 +96,9 @@ struct opencl_kernel_entry_t *opencl_kernel_add(struct opencl_kernel_t *kernel,
  * OpenCL API Functions
  */
 
-cl_kernel clCreateKernel(
-	cl_program program,
-	const char *kernel_name,
-	cl_int *errcode_ret)
-{
+cl_kernel clCreateKernel(cl_program program, const char *kernel_name, cl_int *errcode_ret){
+
+
 	struct opencl_kernel_t *kernel;
 	int index;
 
@@ -152,8 +147,7 @@ cl_kernel clCreateKernel(
 
 		/* Create architecture-specific kernel */
 		assert(device->arch_kernel_create_func);
-		arch_kernel = device->arch_kernel_create_func(kernel,
-			arch_program, kernel_name);
+		arch_kernel = device->arch_kernel_create_func(kernel, arch_program, kernel_name);
 
 		/* Add new entry to the generic kernel object */
 		opencl_kernel_add(kernel, device, arch_kernel, arch_program);
@@ -167,20 +161,16 @@ cl_kernel clCreateKernel(
 }
 
 
-cl_int clCreateKernelsInProgram(
-	cl_program program,
-	cl_uint num_kernels,
-	cl_kernel *kernels,
-	cl_uint *num_kernels_ret)
-{
+cl_int clCreateKernelsInProgram(cl_program program, cl_uint num_kernels, cl_kernel *kernels, cl_uint *num_kernels_ret){
+
+
 	__OPENCL_NOT_IMPL__
 	return 0;
 }
 
 
-cl_int clRetainKernel(
-	cl_kernel kernel)
-{
+cl_int clRetainKernel(cl_kernel kernel){
+
 	/* Debug */
 	opencl_debug("call '%s'", __FUNCTION__);
 	opencl_debug("\tkernel = %p", kernel);
@@ -189,9 +179,8 @@ cl_int clRetainKernel(
 }
 
 
-cl_int clReleaseKernel(
-	cl_kernel kernel)
-{
+cl_int clReleaseKernel(cl_kernel kernel){
+
 	/* Debug */
 	opencl_debug("call '%s'", __FUNCTION__);
 	opencl_debug("\tkernel = %p", kernel);
@@ -200,12 +189,9 @@ cl_int clReleaseKernel(
 }
 
 
-cl_int clSetKernelArg(
-	cl_kernel kernel,
-	cl_uint arg_index,
-	size_t arg_size,
-	const void *arg_value)
-{
+cl_int clSetKernelArg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void *arg_value){
+
+
 	struct opencl_kernel_entry_t *entry;
 	cl_int status;
 	int i;
@@ -226,8 +212,7 @@ cl_int clSetKernelArg(
 	{
 		entry = list_get(kernel->entry_list, i);
 		assert(entry->device->arch_kernel_set_arg_func);
-		status = entry->device->arch_kernel_set_arg_func(entry->arch_kernel,
-			arg_index, arg_size, (void *) arg_value);
+		status = entry->device->arch_kernel_set_arg_func(entry->arch_kernel, arg_index, arg_size, (void *) arg_value);
 		if (status != CL_SUCCESS)
 			return status;
 	}

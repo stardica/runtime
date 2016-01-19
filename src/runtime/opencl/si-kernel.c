@@ -222,17 +222,16 @@ void opencl_si_kernel_debug(struct opencl_si_kernel_t *kernel)
 }
 
 
-int opencl_si_kernel_set_arg(struct opencl_si_kernel_t *kernel, int arg_index,
-	unsigned int arg_size, void *arg_value)
-{
+int opencl_si_kernel_set_arg(struct opencl_si_kernel_t *kernel, int arg_index, unsigned int arg_size, void *arg_value){
+
+
 	struct opencl_si_arg_t *arg;
 	struct opencl_mem_t *mem;
 
 	/* Check valid argument index */
 	arg = list_get(kernel->arg_list, arg_index);
 	if (!arg)
-		fatal("%s: invalid argument index (%d)\n",
-				__FUNCTION__, arg_index);
+		fatal("%s: invalid argument index (%d)\n", __FUNCTION__, arg_index);
 
 	/* Perform ABI call depending on the argument type */
 	switch (arg->type)
@@ -241,8 +240,7 @@ int opencl_si_kernel_set_arg(struct opencl_si_kernel_t *kernel, int arg_index,
 	case opencl_si_arg_value:
 
 		/* ABI call */
-		syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_kernel_set_arg_value,
-				kernel->id, arg_index, arg_value, arg_size);
+		syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_kernel_set_arg_value, kernel->id, arg_index, arg_value, arg_size);
 		break;
 
 	case opencl_si_arg_pointer:
@@ -253,28 +251,25 @@ int opencl_si_kernel_set_arg(struct opencl_si_kernel_t *kernel, int arg_index,
 		if (arg_value)
 		{
 			mem = * (struct opencl_mem_t **) arg_value;
+
 			if (!opencl_object_verify(mem, OPENCL_OBJECT_MEM))
-				fatal("%s: argument %d is not a cl_mem object",
-						__FUNCTION__, arg_index);
+				fatal("%s: argument %d is not a cl_mem object", __FUNCTION__, arg_index);
+
 			if (arg_size != 4)
 			{
-				fatal("%s: cl_mem argument %d expects size 4 "
-					"(%d given)", __FUNCTION__, arg_index,
-					arg_size);
+				fatal("%s: cl_mem argument %d expects size 4 (%d given)", __FUNCTION__, arg_index, arg_size);
 			}
+
 			arg_value = mem->device_ptr;
 			arg_size = mem->size;
 		}
 
 		/* ABI call */
-		syscall(OPENCL_SYSCALL_CODE, 
-			opencl_abi_si_kernel_set_arg_pointer, kernel->id, 
-			arg_index, arg_value, arg_size);
+		syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_kernel_set_arg_pointer, kernel->id, arg_index, arg_value, arg_size);
 		break;
 
 	default:
-		fatal("%s: argument type not supported (%d)",
-				__FUNCTION__, arg->type);
+		fatal("%s: argument type not supported (%d)", __FUNCTION__, arg->type);
 	}
 
 	/* Success */

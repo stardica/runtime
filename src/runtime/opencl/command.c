@@ -41,11 +41,8 @@ static void opencl_command_run_mem_read(struct opencl_command_t *command)
 	struct opencl_device_t *device = command->device;
 
 	assert(device->arch_device_mem_read_func);
-	device->arch_device_mem_read_func(
-			device->arch_device,
-			command->mem_read.host_ptr,
-			command->mem_read.device_ptr,
-			command->mem_read.size);
+	device->arch_device_mem_read_func(device->arch_device, command->mem_read.host_ptr, command->mem_read.device_ptr, command->mem_read.size);
+
 }
 
 
@@ -257,10 +254,7 @@ struct opencl_command_t *opencl_command_create_mem_read(
 	struct opencl_command_t *command;
 
 	/* Initialize */
-	command = opencl_command_create(opencl_command_mem_read,
-			opencl_command_run_mem_read,
-			command_queue, done_event_ptr, num_wait_events,
-			wait_events);
+	command = opencl_command_create(opencl_command_mem_read, opencl_command_run_mem_read, command_queue, done_event_ptr, num_wait_events, wait_events);
 	command->mem_read.host_ptr = host_ptr;
 	command->mem_read.device_ptr = device_ptr;
 	command->mem_read.size = size;

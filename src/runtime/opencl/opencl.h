@@ -135,7 +135,8 @@ typedef void (*opencl_arch_device_free_func_t)(
  * device-specific functions. */
 typedef void *(*opencl_arch_device_mem_alloc_func_t)(
 		void *device,  /* Of type 'opencl_xxx_device_t' */
-		size_t size);
+		size_t size,
+		void *host);
 
 /* Free device memory */
 typedef void (*opencl_arch_device_mem_free_func_t)(
