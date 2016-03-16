@@ -99,7 +99,7 @@
 								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.exe.release.option.optimization.level.1166402677" name="Optimization Level" superClass="gnu.c.compiler.exe.release.option.optimization.level" value="gnu.c.optimization.level.more" valueType="enumerated"/>
 								<option id="gnu.c.compiler.exe.release.option.debugging.level.1902958758" name="Debug Level" superClass="gnu.c.compiler.exe.release.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.dialect.std.1485936317" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
-								<option id="gnu.c.compiler.option.misc.other.18784608" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-pthread -D_GNU_SOURCE -c -fmessage-length=0" valueType="string"/>
+								<option id="gnu.c.compiler.option.misc.other.18784608" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-m32 -pthread -D_GNU_SOURCE -c -fmessage-length=0" valueType="string"/>
 								<option id="gnu.c.compiler.option.include.paths.945976658" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/stardica/Desktop/runtime/src"/>
 								</option>
@@ -149,5 +149,12 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Release_shared">
+			<resource resourceType="PROJECT" workspacePath="/runtime"/>
+		</configuration>
+		<configuration configurationName="Release_Static">
+			<resource resourceType="PROJECT" workspacePath="/runtime"/>
+		</configuration>
+	</storageModule>
 </cproject>
