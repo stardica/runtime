@@ -37,7 +37,7 @@
 								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.exe.release.option.optimization.level.1008618804" name="Optimization Level" superClass="gnu.c.compiler.exe.release.option.optimization.level" value="gnu.c.optimization.level.more" valueType="enumerated"/>
 								<option id="gnu.c.compiler.exe.release.option.debugging.level.1978052265" name="Debug Level" superClass="gnu.c.compiler.exe.release.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.dialect.std.1689923195" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
-								<option id="gnu.c.compiler.option.misc.other.1418590324" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-pthread -D_GNU_SOURCE -c -fmessage-length=0" valueType="string"/>
+								<option id="gnu.c.compiler.option.misc.other.1418590324" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-m32 -pthread -D_GNU_SOURCE -c -fmessage-length=0" valueType="string"/>
 								<option id="gnu.c.compiler.option.include.paths.1008159699" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/stardica/Desktop/runtime/src"/>
 								</option>
@@ -50,6 +50,7 @@
 									<listOptionValue builtIn="false" value="dl"/>
 									<listOptionValue builtIn="false" value="rt"/>
 								</option>
+								<option id="gnu.c.link.option.ldflags.530578491" superClass="gnu.c.link.option.ldflags" value="-m32" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1215006033" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>

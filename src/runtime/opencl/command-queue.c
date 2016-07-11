@@ -796,8 +796,7 @@ cl_int clEnqueueNDRangeKernel(
 		return CL_INVALID_KERNEL;
 
 	/* Check valid events */
-	status = opencl_event_wait_list_check(num_events_in_wait_list, 
-		event_wait_list);
+	status = opencl_event_wait_list_check(num_events_in_wait_list, event_wait_list);
 	if (status != CL_SUCCESS)
 		return status;
 

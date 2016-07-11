@@ -129,11 +129,15 @@ cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void 
 	if(linked)
 	{
 		mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size, host_ptr);
+
+		printf("OCLCALL putting host_ptr 0x%08x\n", host_ptr);
+
 	}
 	else
 	{
 		mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size, NULL);
 	}
+
 	mem->device = device;
 	mem->size = size;
 

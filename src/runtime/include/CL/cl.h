@@ -1548,6 +1548,7 @@ extern cl_int clFlush(cl_command_queue);
 extern cl_int clFinish(cl_command_queue);
 
 
+
 extern cl_int
 clEnqueueReadBuffer(cl_command_queue,
 	cl_mem,
