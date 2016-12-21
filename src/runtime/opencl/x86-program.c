@@ -36,9 +36,9 @@ struct opencl_x86_program_t *opencl_x86_program_create(
 		void *binary,
 		unsigned int length)
 {
-	struct opencl_x86_program_t *program;
-	struct elf_file_t *elf_file;
-	struct elf_section_t *section;
+	struct opencl_x86_program_t *program = NULL;
+	struct elf_file_t *elf_file = NULL;
+	struct elf_section_t *section = NULL;
 
 	int f;
 	int found;

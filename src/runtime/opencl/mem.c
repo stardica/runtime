@@ -129,9 +129,7 @@ cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void 
 	if(linked)
 	{
 		mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size, host_ptr);
-
-		printf("OCLCALL putting host_ptr 0x%08x\n", host_ptr);
-
+		//printf("OCLCALL putting host_ptr 0x%08x\n", (unsigned int) host_ptr);
 	}
 	else
 	{
@@ -144,10 +142,12 @@ cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void 
 	/* Save host pointer, if given */
 	mem->use_host_ptr = (flags & CL_MEM_USE_HOST_PTR) > 0;
 	if (mem->use_host_ptr)
+	{
 		mem->host_ptr = host_ptr;
+		//printf("mem->host_ptr 0x%08x\n", (unsigned int) mem->host_ptr);
+	//	getchar();
+	}
 
-	/*printf("clCreateBuffer(): creating memory buffer\n");
-	getchar();*/
 
 	/* Copy buffer contents */
 	assert(device->arch_device_mem_write_func);

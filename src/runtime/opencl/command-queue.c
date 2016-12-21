@@ -585,6 +585,7 @@ cl_int clEnqueueCopyBufferToImage(
 	return 0;
 }
 
+//clEnqueueMapBuffer(command_queue, MatrixTemp[ret], CL_TRUE, CL_MAP_READ, 0, sizeof(float) * size, 0, NULL, NULL, &error);
 
 void *clEnqueueMapBuffer(
 	cl_command_queue command_queue,
@@ -665,6 +666,9 @@ void *clEnqueueMapBuffer(
 	 * the host pointer right away. */
 	if (!mem->host_ptr)
 	{
+		fatal("clEnqueueMapBuffer(): allocing space on host for ocl mem copy should be gone now...\n");
+		fflush(stderr);
+
 		assert(!mem->use_host_ptr);
 		mem->host_ptr = xcalloc(1, mem->size);
 	}

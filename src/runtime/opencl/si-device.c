@@ -180,10 +180,10 @@ void opencl_si_device_mem_read(struct opencl_si_device_t *device, void *host_ptr
 
 void opencl_si_device_mem_write(struct opencl_si_device_t *device, void *device_ptr, void *host_ptr, unsigned int size)
 {
-	int temp = 12345;
+	//int temp = 12345;
 
 	/* Invoke 'mem_write' ABI call */
-	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_mem_write, device_ptr, host_ptr, size, temp);
+	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_mem_write, device_ptr, host_ptr, size);
 }
 
 

@@ -682,10 +682,9 @@ void opencl_x86_device_free(struct opencl_x86_device_t *device)
 }
 
 
-void *opencl_x86_device_mem_alloc(struct opencl_x86_device_t *device,
-		unsigned int size)
+void *opencl_x86_device_mem_alloc(struct opencl_x86_device_t *device, unsigned int size)
 {
-	void *ptr;
+	void *ptr = NULL;
 
 	if (posix_memalign(&ptr, 16, size))
 		fatal("%s: out of memory", __FUNCTION__);
