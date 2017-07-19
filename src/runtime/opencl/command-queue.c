@@ -643,8 +643,7 @@ void *clEnqueueMapBuffer(
 	/* It is not specified what happens when a memory object is mapped
 	 * twice without being unmapped. Detect this case and abort program. */
 	if (mem->mapped)
-		fatal("%s: cl_mem object already mapped",
-				__FUNCTION__);
+		fatal("%s: cl_mem object already mapped", __FUNCTION__);
 
 	/* Check buffer boundaries */
 	if (offset + cb > mem->size)

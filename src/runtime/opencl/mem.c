@@ -140,12 +140,13 @@ cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void 
 	mem->size = size;
 
 	/* Save host pointer, if given */
-	mem->use_host_ptr = (flags & CL_MEM_USE_HOST_PTR) > 0;
+	//mem->use_host_ptr = (flags & CL_MEM_USE_HOST_PTR) > 0;
+	mem->use_host_ptr = linked;
 	if (mem->use_host_ptr)
 	{
 		mem->host_ptr = host_ptr;
-		//printf("mem->host_ptr 0x%08x\n", (unsigned int) mem->host_ptr);
-	//	getchar();
+		/*printf("mem->host_ptr 0x%08x\n", (unsigned int) mem->host_ptr);
+		exit(0);*/
 	}
 
 
