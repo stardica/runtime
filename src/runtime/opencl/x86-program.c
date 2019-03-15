@@ -73,15 +73,22 @@ struct opencl_x86_program_t *opencl_x86_program_create(
 	program->file_name = xstrdup("/tmp/tmp_XXXXXX");
 	f = mkstemp(program->file_name);
 	if (f == -1)
+	{
 		fatal("%s: could not create temporary file", __FUNCTION__);
+	}
 	if (write(f, section->buffer.ptr, section->buffer.size) != section->buffer.size)
+	{
 		fatal("%s: could not write to temporary file", __FUNCTION__);
+	}
+	printf("wrote %s to file\n", section->name);
 	close(f);
 
 	/* Close ELF external binary */
 	elf_file_free(elf_file);
 
 	/* Load internal binary for dynamic linking */
+	//printf("file name 2: %s\n", program->file_name);
+
 	program->dlhandle = dlopen(program->file_name, RTLD_NOW);
 	if (!program->dlhandle)
 		fatal("%s: could not open ELF binary derived from program", __FUNCTION__);		
@@ -107,8 +114,12 @@ int opencl_x86_program_valid_binary(
 	void *binary,
 	unsigned int length)
 {
+
+	//just casts the whole raw binanry to elf type and checks machine type. cool trick.
 	Elf32_Ehdr *h = (Elf32_Ehdr *) binary;
 
-	return h->e_machine == 0x7d2;
+	//return h->e_machine == 0x7d2;
+	printf("Machine check 0x%08x\n", h->e_machine);
+	return (h->e_machine == 0x7d8 || h->e_machine == 0x7d2);
 }
 

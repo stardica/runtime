@@ -174,6 +174,12 @@ int opencl_x86_kernel_set_arg(
 		unsigned int arg_size,
 		void *arg_value);
 
+struct opencl_x86_ndrange_t *opencl_x86_ndrange_create_native(
+	struct opencl_ndrange_t *ndrange,
+	unsigned int work_dim, unsigned int *global_work_offset,
+	unsigned int *global_work_size, unsigned int *local_work_size);
+
+
 struct opencl_x86_ndrange_t *opencl_x86_ndrange_create(
 		struct opencl_ndrange_t *ndrange,
 		struct opencl_x86_kernel_t *arch_kernel,

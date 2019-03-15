@@ -48,8 +48,7 @@ struct opencl_context_t *opencl_context_create(void)
 	context->device_list = list_create();
 	
 	/* Register OpenCL object */
-	opencl_object_create(context, OPENCL_OBJECT_CONTEXT,
-		(opencl_object_free_func_t) opencl_context_free);
+	opencl_object_create(context, OPENCL_OBJECT_CONTEXT, (opencl_object_free_func_t) opencl_context_free);
 
 	/* Return */
 	return context;
@@ -63,8 +62,7 @@ void opencl_context_free(struct opencl_context_t *context)
 }
 
 
-int opencl_context_has_device(struct opencl_context_t *context,
-	struct opencl_device_t *device)
+int opencl_context_has_device(struct opencl_context_t *context, struct opencl_device_t *device)
 {
 	int i;
 
@@ -80,8 +78,6 @@ int opencl_context_has_device(struct opencl_context_t *context,
 }
 
 
-
-
 /*
  * OpenCL API Functions
  */
@@ -94,6 +90,7 @@ cl_context clCreateContext(
 	void *user_data,
 	cl_int *errcode_ret)
 {
+
 	int i;
 	struct _cl_context *context;
 
@@ -107,7 +104,7 @@ cl_context clCreateContext(
 	opencl_debug("\terrcode_ret = %p", errcode_ret);
 
 	/* Supported combinations of arguments */
-	OPENCL_ARG_NOT_SUPPORTED_NEQ(num_devices, 1);
+	//OPENCL_ARG_NOT_SUPPORTED_NEQ(num_devices, 1);
 	OPENCL_ARG_NOT_SUPPORTED_NEQ((int) pfn_notify, 0);
 	OPENCL_ARG_NOT_SUPPORTED_NEQ((int) user_data, 0);
 
@@ -136,6 +133,7 @@ cl_context clCreateContext(
 				*errcode_ret = CL_INVALID_DEVICE;
 			return NULL;
 		}
+
 		opencl_debug("\tdevice %d: %s", i, devices[i]->name);
 	}
 

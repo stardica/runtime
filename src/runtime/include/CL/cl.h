@@ -117,6 +117,9 @@ extern "C" {
 #define CL_DEVICE_TYPE_CUSTOM                       (1 << 4)
 #define CL_DEVICE_TYPE_ALL                          0xFFFFFFFF
 
+#define CL_CPU_WORKSPACE							0x0000
+#define CL_GPU_WORKSPACE							0x0001
+
 /* cl_device_info */
 #define CL_DEVICE_TYPE                              0x1000
 #define CL_DEVICE_VENDOR_ID                         0x1001
@@ -1322,6 +1325,8 @@ typedef struct _cl_platform_id *cl_platform_id;
 typedef struct _cl_device_id *cl_device_id;
 typedef struct _cl_context *cl_context;
 typedef struct _cl_command_queue *cl_command_queue;
+/*typedef struct _cl_command_t *cl_command; //star added this*/
+typedef void (*opencl_cpu_native_func_t)(unsigned int, void *, void*);
 typedef struct _cl_mem *cl_mem;
 typedef struct _cl_program *cl_program;
 typedef struct _cl_kernel *cl_kernel;
@@ -1377,6 +1382,26 @@ typedef struct _cl_buffer_region
 	size_t size;
 
 } cl_buffer_region;
+
+
+typedef struct opencl_native_kernel_args_t
+{
+    unsigned int arg_index;
+	size_t buffer_size;
+    void *buffer;
+
+}opencl_native_kernel_args;
+
+typedef struct cl_work_space_t{
+
+	int dim;
+	int GWO[3];
+	int GWS[3];
+	int LWS[3];
+	int POS[3]; //position
+
+}cl_work_space;
+
 extern cl_int clGetPlatformIDs(cl_uint, cl_platform_id *, cl_uint *);
 
 extern cl_int
@@ -1413,8 +1438,10 @@ clGetContextInfo(cl_context, cl_context_info, size_t, void *, size_t *);
 
 
 extern cl_command_queue
-clCreateCommandQueue(cl_context,
-	cl_device_id, cl_command_queue_properties, cl_int *);
+clCreateCommandQueue(cl_context, cl_device_id, cl_command_queue_properties, cl_int *);
+
+extern cl_command_queue
+clCreateCommandQueueMulti(cl_context, cl_uint, cl_device_id *, cl_command_queue_properties, cl_int *);
 
 extern cl_int clRetainCommandQueue(cl_command_queue);
 
@@ -1425,6 +1452,9 @@ clGetCommandQueueInfo(cl_command_queue,
 	cl_command_queue_info, size_t, void *, size_t *);
 
 extern cl_mem clCreateBuffer(cl_context, cl_mem_flags, size_t, void *, cl_int *, cl_bool);
+
+//star added this
+extern cl_mem clCreateMemObject(cl_context, size_t, void *, cl_int *);
 
 extern cl_mem
 clCreateSubBuffer(cl_mem,
@@ -1476,10 +1506,17 @@ clCreateProgramWithSource(cl_context,
 	cl_uint, const char **, const size_t *, cl_int *);
 
 extern cl_program
-clCreateProgramWithBinary(cl_context,
-	cl_uint,
-	const cl_device_id *,
-	const size_t *, const unsigned char **, cl_int *, cl_int *);
+clCreateProgramWithBinary(cl_context, cl_uint, const cl_device_id *, const size_t *, const unsigned char **, cl_int *, cl_int *);
+
+//star added this
+extern cl_program clCreateProgram(cl_context context, cl_int *errcode_ret);
+
+//star added this
+extern cl_int clAddProgramEntryWithBinary(cl_program, cl_device_type, const size_t *, const unsigned char *, cl_int *, cl_int *);
+
+//star added this
+extern cl_int clAddProgramEntryWithNativeKernel(cl_program, cl_device_type, opencl_cpu_native_func_t, cl_int *);
+
 
 extern cl_int clRetainProgram(cl_program);
 
@@ -1503,6 +1540,9 @@ clGetProgramBuildInfo(cl_program,
 
 extern cl_kernel clCreateKernel(cl_program, const char *, cl_int *);
 
+//star added this
+extern cl_kernel clCreateKernelMulti(cl_program, const char *, cl_int *);
+
 extern cl_int
 clCreateKernelsInProgram(cl_program, cl_uint, cl_kernel *, cl_uint *);
 
@@ -1511,6 +1551,8 @@ extern cl_int clRetainKernel(cl_kernel);
 extern cl_int clReleaseKernel(cl_kernel);
 
 extern cl_int clSetKernelArg(cl_kernel, cl_uint, size_t, const void *);
+
+extern cl_int clSetKernelArgMulti(cl_kernel, cl_device_type, cl_uint, size_t, const void *);
 
 extern cl_int
 clGetKernelInfo(cl_kernel, cl_kernel_info, size_t, void *, size_t *);
@@ -1663,6 +1705,20 @@ clEnqueueNDRangeKernel(cl_command_queue,
 	const size_t *,
 	const size_t *,
 	const size_t *, cl_uint, const cl_event *, cl_event *);
+
+//star added this
+extern cl_int
+clEnqueueNDRangeKernelMulti(cl_command_queue *,
+	cl_uint num_devices,
+	cl_kernel,
+	cl_work_space *,
+	cl_uint,
+	const cl_event *,
+	cl_event *);
+
+//star added this
+/*extern struct opencl_command_t *opencl_create_test_command(opencl_command_test_func_t func,
+		cl_command_queue *command_queue);*/
 
 extern cl_int
 clEnqueueTask(cl_command_queue,

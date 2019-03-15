@@ -107,20 +107,13 @@ struct opencl_platform_t *opencl_platform_create(void)
 	platform->device_list = list_create();
 
 
-
-
 	/* Add x86 device */
 	device = opencl_device_create();
-
-
-
 	device->arch_device = opencl_x86_device_create(device);
 
 
 
 	list_add(platform->device_list, device);
-
-
 
 	/* Devices other than x86 CPU are added only on simulated mode */
 	if (!opencl_native_mode)
@@ -132,9 +125,9 @@ struct opencl_platform_t *opencl_platform_create(void)
 	}
 
 	/* Add Union device */
-	device = opencl_device_create();
-	device->arch_device = opencl_union_device_create(device, platform->device_list);
-	list_add(platform->device_list, device);
+	//device = opencl_device_create();
+	//device->arch_device = opencl_union_device_create(device, platform->device_list);
+	//list_add(platform->device_list, device);
 
 	/* Return */
 	return platform;
@@ -171,12 +164,10 @@ void opencl_platform_free(struct opencl_platform_t *platform)
 #define OPENCL_VERSION_MAJOR  3
 #define OPENCL_VERSION_MINOR  1664
 
-cl_int clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platforms, cl_uint *num_platforms)
-{
+cl_int clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platforms, cl_uint *num_platforms){
+
 	struct opencl_version_t version;
 	int ret;
-
-
 
 	/* Debug */
 	opencl_debug("call '%s'", __FUNCTION__);
@@ -190,8 +181,6 @@ cl_int clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platforms, cl_uint 
 	 * checked for compatibility with the runtime library version. */
 
 	ret = syscall(OPENCL_SYSCALL_CODE, opencl_abi_init, &version);
-
-
 
 	/* If the system call returns error, we are in native mode. */
 	if (ret == -1 && !opencl_native_mode)
@@ -212,12 +201,9 @@ cl_int clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platforms, cl_uint 
 				version.major, version.minor, opencl_err_version);
 	}
 
-
-
 	/* Create platform if it doesn't exist yet */
 	if (!opencl_platform)
 		opencl_platform = opencl_platform_create();
-
 
 
 	/* If an array is passed in, it must have a corresponding length

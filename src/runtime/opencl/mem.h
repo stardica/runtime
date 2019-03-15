@@ -28,10 +28,18 @@ enum ocl_linked_t
 	OCL_LINKED
 };
 
+enum cl_mem_type_t
+{
+	non_coherent = 0,
+	coherent
+};
+
 
 /* Memory object */
 struct _cl_mem
 {
+	enum cl_mem_type_t mem_type;
+
 	/* Pointer in device memory. Technically, there should be an array of
 	 * devices and device pointers, but only one allowed in this
 	 * implementation. */

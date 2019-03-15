@@ -36,7 +36,8 @@ enum opencl_command_type_t
 	opencl_command_mem_copy,
 	opencl_command_map_buffer,
 	opencl_command_unmap_buffer,
-	opencl_command_launch_ndrange
+	opencl_command_launch_ndrange,
+	opencl_command_test
 };
 
 
@@ -51,7 +52,12 @@ struct opencl_command_t
 
 	struct opencl_command_queue_t *command_queue;
 	struct opencl_device_t *device;
+	unsigned int num_devices;
+
 	void *ndrange;  /* Architecture-specific ND-Range */
+	cl_work_space *work_space;
+
+	struct list_t * arg_list;
 
 	union
 	{
@@ -83,6 +89,8 @@ struct opencl_command_t
 	};
 };
 
+/*struct opencl_command_t *opencl_create_test_command(opencl_command_func_t func,
+		struct opencl_command_queue_t *command_queue);*/
 
 struct opencl_command_t *opencl_command_create(
 		enum opencl_command_type_t type,
@@ -145,6 +153,25 @@ struct opencl_command_t *opencl_command_create_unmap_buffer(
 		int num_wait_events,
 		struct opencl_event_t **wait_events);
 
+struct opencl_command_t *opencl_command_run_native_kernel_init(
+	struct opencl_command_queue_t *command_queue,
+	struct opencl_event_t **done_event_ptr,
+	int num_wait_events,
+	struct opencl_event_t **wait_events);
+
+struct opencl_command_t *opencl_command_run_ndrage_init(
+	struct opencl_command_queue_t *command_queue,
+	struct opencl_event_t **done_event_ptr,
+	int num_wait_events,
+	struct opencl_event_t **wait_events);
+
+struct opencl_ndrange_t * opencl_create_ndrange_multi(
+	struct opencl_kernel_t *kernel,
+	int work_dim,
+	unsigned int *global_work_offset,
+	unsigned int *global_work_size,
+	unsigned int *local_work_size);
+
 struct opencl_command_t *opencl_command_create_ndrange(
 		struct opencl_device_t *device,
 		struct opencl_kernel_t *kernel,
@@ -158,6 +185,9 @@ struct opencl_command_t *opencl_command_create_ndrange(
 		struct opencl_event_t **wait_events);
 
 void opencl_command_free(struct opencl_command_t *command);
+
+//star added this
+void opencl_command_run_multi(struct opencl_command_t *command);
 
 void opencl_command_run(struct opencl_command_t *command);
 

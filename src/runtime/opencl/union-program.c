@@ -25,8 +25,7 @@ struct opencl_union_program_t *opencl_union_program_create(
 	program->programs = list_create();
 	program->device = device;
 
-	elf_file = elf_file_create_from_buffer(binary, length, 
-		"Fused OpenCL Binary");
+	elf_file = elf_file_create_from_buffer(binary, length, "Fused OpenCL Binary");
 
 	/* find the binary that corresponds to each device in the union */
 	LIST_FOR_EACH(device->devices, i)
@@ -83,9 +82,8 @@ void opencl_union_program_free(struct opencl_union_program_t *program)
 }
 
 
-int opencl_union_program_valid_binary(void *dev, void *binary, 
-	unsigned int length)
-{
+int opencl_union_program_valid_binary(void *dev, void *binary, unsigned int length){
+
 	int i;
 	struct opencl_union_device_t *device = dev;
 	Elf32_Ehdr *h = (Elf32_Ehdr *) binary;
@@ -99,8 +97,7 @@ int opencl_union_program_valid_binary(void *dev, void *binary,
 	{
 		return 0;
 	}
-	elf_file = elf_file_create_from_buffer(binary, length, 
-		"Fused OpenCL Binary");
+	elf_file = elf_file_create_from_buffer(binary, length, "Fused OpenCL Binary");
 
 	/* get each subdevice and check to see if it has a binary */
 	LIST_FOR_EACH(device->devices, i)

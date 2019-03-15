@@ -78,7 +78,7 @@ static void opencl_device_matcher(struct opencl_device_t *device, void *user_dat
 {
 	struct opencl_device_match_info_t *info = user_data;
 
-	if (info->device_type & device->type)
+	if(info->device_type & device->type)
 	{
 		if (info->num_matches < info->num_entries)
 			info->devices[info->num_matches] = device;
@@ -139,8 +139,8 @@ int opencl_device_verify(struct opencl_device_t *device)
 
 	info.device = device;
 	info.found = 0;	
-	opencl_platform_for_each_device(opencl_platform,
-		opencl_device_finder, &info);
+	opencl_platform_for_each_device(opencl_platform, opencl_device_finder, &info);
+
 	return info.found;
 }
 

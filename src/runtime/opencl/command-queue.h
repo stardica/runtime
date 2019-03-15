@@ -26,11 +26,25 @@
 /*
  * Command Queue
  */
+
+enum command_queue_type_t{
+	cpu = 0,
+	gpu,
+	num_types
+};
+
+
 struct opencl_command_t;
 
 struct opencl_command_queue_t
 {
+	//star added this
+	int id;
+
 	struct opencl_device_t *device;
+	cl_ulong device_type; //star added this
+	cl_uint num_devices;
+	cl_uint host_num_cores;
 
 	/* List of commands - elements of type opencl_command_t */
 	struct list_t *command_list;
@@ -46,7 +60,7 @@ struct opencl_command_queue_t
 
 
 /* Create/free */
-struct opencl_command_queue_t *opencl_command_queue_create(void);
+struct opencl_command_queue_t *opencl_command_queue_create(cl_device_id, cl_command_queue_properties);
 void opencl_command_queue_free(struct opencl_command_queue_t *command_queue);
 
 void opencl_command_queue_enqueue(struct opencl_command_queue_t *command_queue, struct opencl_command_t *command);

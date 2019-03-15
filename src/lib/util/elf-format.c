@@ -389,7 +389,8 @@ static void elf_file_read_elf_header(struct elf_file_t *elf_file)
 	
 	/* Check that header size is correct */
 	if (elf_header->e_ehsize != sizeof(Elf32_Ehdr))
-		fatal("%s: invalid ELF header size", elf_file->path);
+		fatal("%s: invalid ELF header size at %d should be %d\n",
+				elf_file->path, elf_header->e_ehsize, sizeof(Elf32_Ehdr));
 
 	/* Check endianness */
 	if (elf_header->e_ident[5] != 1)

@@ -101,6 +101,10 @@ struct _cl_device_id
 	opencl_arch_kernel_free_func_t arch_kernel_free_func;
 	opencl_arch_kernel_set_arg_func_t arch_kernel_set_arg_func;
 
+	//star added this.
+	opencl_arch_kernel_set_arg_multi_func_t arch_kernel_set_arg_multi_func;
+
+
 	/* Call-back functions for ND-range execution */
 	opencl_arch_ndrange_create_func_t arch_ndrange_create_func;
 	opencl_arch_ndrange_init_func_t arch_ndrange_init_func;
@@ -112,14 +116,15 @@ struct _cl_device_id
 	 * This pointer is used to reference what would be a sub-class in an
 	 * object-oriented language. */
 	void *arch_device;
+	void *device_ndrange;
 };
 
 
 struct opencl_device_t *opencl_device_create(void);
 void opencl_device_free(struct opencl_device_t *device);
 
-int opencl_device_verify(struct opencl_device_t *device);
 
+int opencl_device_verify(struct opencl_device_t *device);
 
 #endif
 

@@ -356,8 +356,7 @@ cl_int clGetEventProfilingInfo(
 }
 
 
-cl_int clFlush(
-	cl_command_queue command_queue)
+cl_int clFlush(cl_command_queue command_queue)
 {
 	/* Debug */
 	opencl_debug("call '%s'", __FUNCTION__);

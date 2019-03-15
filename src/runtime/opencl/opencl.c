@@ -126,12 +126,7 @@ cl_int opencl_set_string(const char *src_string, size_t dest_size,
 
 int opencl_is_valid_device_type(cl_device_type device_type)
 {
-	return device_type == CL_DEVICE_TYPE_ALL
-		|| (device_type & 
-			(CL_DEVICE_TYPE_GPU 
-			| CL_DEVICE_TYPE_CPU 
-			| CL_DEVICE_TYPE_ACCELERATOR 
-			| CL_DEVICE_TYPE_DEFAULT));
+	return device_type == CL_DEVICE_TYPE_ALL || (device_type & (CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_CPU | CL_DEVICE_TYPE_ACCELERATOR | CL_DEVICE_TYPE_DEFAULT));
 }
 
 

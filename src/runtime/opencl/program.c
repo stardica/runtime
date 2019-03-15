@@ -54,8 +54,7 @@ struct opencl_program_t *opencl_program_create(struct opencl_context_t *context)
 	program->entry_list = list_create();
 
 	/* Register OpenCL object */
-	opencl_object_create(program, OPENCL_OBJECT_PROGRAM,
-		(opencl_object_free_func_t) opencl_program_free);
+	opencl_object_create(program, OPENCL_OBJECT_PROGRAM, (opencl_object_free_func_t) opencl_program_free);
 
 	/* Return */
 	return program;
@@ -110,17 +109,22 @@ int opencl_program_has_device(struct opencl_program_t *program,
 }
 
 
-struct opencl_program_entry_t *opencl_program_add(struct opencl_program_t *program, struct opencl_device_t *device, void *arch_program)
+struct opencl_program_entry_t *opencl_program_add(struct opencl_program_t *program,
+		struct opencl_device_t *device,
+		void *arch_program,
+		enum program_entry_type_t type)
 {
 	struct opencl_program_entry_t *entry;
 
 	/* Initialize new entry */
 	entry = xcalloc(1, sizeof(struct opencl_program_entry_t));
 	entry->device = device;
+	entry->arch_program_type = type;
 	entry->arch_program = arch_program;
 
 	/* Add entry to the list and return */
 	list_add(program->entry_list, entry);
+
 	return entry;
 }
 
@@ -155,8 +159,6 @@ void opencl_program_set_source(struct opencl_program_t *program,
 	assert(!program->source);
 	program->source = source;
 }
-
-
 
 
 
@@ -221,6 +223,160 @@ cl_program clCreateProgramWithSource(
 }
 
 
+cl_program clCreateProgram(cl_context context, cl_int *errcode_ret){
+
+	/* Check valid context */
+	if (!context)
+	{
+		if (errcode_ret)
+			*errcode_ret = CL_INVALID_CONTEXT;
+		return NULL;
+	}
+
+	/* Create program */
+	struct opencl_program_t *program = opencl_program_create(context);
+
+	/* Return program */
+	if (program)
+		*errcode_ret = CL_SUCCESS;
+
+	return program;
+}
+
+
+extern cl_int clAddProgramEntryWithNativeKernel(
+		cl_program program,
+		cl_device_type device_type,
+		opencl_cpu_native_func_t func,
+		cl_int *errcode_ret)
+{
+
+	int i = 0;
+	struct opencl_context_t *context = program->context;
+	struct opencl_device_t *device;
+	cl_ulong current_device_type;
+
+	/* Check valid context */
+	if (!context)
+	{
+		if (errcode_ret)
+			*errcode_ret = CL_INVALID_CONTEXT;
+		printf("no ctx\n");
+		return 0;
+	}
+
+	//locate all devices of the device type provided
+	LIST_FOR_EACH(context->device_list, i) /* Search */
+	{
+		device = list_get(context->device_list, i);
+		clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(current_device_type), &current_device_type, NULL);
+
+		if(device_type == current_device_type)
+		{
+			/*Initialize program entries (per-device-type info) */
+			/* Make sure the type of the binary matches */
+			assert(func);
+
+			if (!func)
+			{
+				if (errcode_ret)
+					*errcode_ret = CL_INVALID_VALUE;
+				return 0;
+			}
+
+			printf("x86 CPU kernel address 0x%08x\n", (unsigned int) func); //this prints the correct address
+			opencl_program_add(program, device, func, program_cpu_native);
+		}
+	}
+
+	//Success
+	if (errcode_ret)
+		*errcode_ret = CL_SUCCESS;
+
+	return 1;
+}
+
+
+
+extern cl_int clAddProgramEntryWithBinary(
+	cl_program program,
+	cl_device_type type,
+	const size_t *lengths,
+	const unsigned char *binaries,
+	cl_int *binary_status,
+	cl_int *errcode_ret)
+{
+
+	int i = 0;
+	struct opencl_context_t *context = program->context;
+	struct opencl_device_t *device;
+	cl_ulong current_device_type;
+	void *arch_program;
+
+	warning("clAddProgramEntryWithBinary(): Check device and binary type prior to linking, but ok for now.\n");
+
+	/* Check valid context */
+	if (!context)
+	{
+		if (errcode_ret)
+			*errcode_ret = CL_INVALID_CONTEXT;
+		printf("no ctx\n");
+		return 0;
+	}
+
+	/* Check valid arguments */
+	if (!context || !lengths || !binaries)
+	{
+		if (errcode_ret)
+			*errcode_ret = CL_INVALID_VALUE;
+		return 0;
+	}
+
+	//locate all device of the type provided
+	LIST_FOR_EACH(context->device_list, i) /* Search */
+	{
+		device = list_get(context->device_list, i);
+		clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(current_device_type), &current_device_type, NULL);
+
+
+		if(type == current_device_type)
+		{
+			/*Initialize program entries (per-device-type info) */
+			/* Make sure the type of the binary matches */
+			assert(device->arch_program_valid_binary_func);
+
+			if (!lengths || !binaries || !device->arch_program_valid_binary_func(device->arch_device, (void *)binaries, *lengths))
+			{
+				if (binary_status)
+				{
+					*binary_status = CL_INVALID_VALUE;
+				}
+				if (errcode_ret)
+					*errcode_ret = CL_INVALID_VALUE;
+				opencl_program_free(program);
+				return 0;
+			}
+
+			/*create the program entry*/
+			//star -- arch_program is a function pointer for x86 stuff
+			assert(device->arch_program_create_func);
+			arch_program = device->arch_program_create_func(program, device->arch_device, (void *)binaries, *lengths);
+
+			opencl_program_add(program, device, arch_program, program_gpu_binary);
+		}
+	}
+
+	//Success
+	if (errcode_ret)
+		*errcode_ret = CL_SUCCESS;
+	if (binary_status)
+		*binary_status = CL_SUCCESS;
+
+	return 1;
+}
+
+
+
 cl_program clCreateProgramWithBinary(
 	cl_context context,
 	cl_uint num_devices,
@@ -263,6 +419,8 @@ cl_program clCreateProgramWithBinary(
 		return NULL;
 	}
 
+	//printf("in runtime num_devices %d name %s\n", num_devices, device_list[0]->name);
+
 	/* Create program */
 	program = opencl_program_create(context);
 
@@ -286,9 +444,7 @@ cl_program clCreateProgramWithBinary(
 
 		/* Make sure the type of the binary matches */
 		assert(device->arch_program_valid_binary_func);
-		if (!lengths[i] || !binaries[i] ||
-			!device->arch_program_valid_binary_func(
-			device->arch_device, (void *) binaries[i], lengths[i]))
+		if (!lengths[i] || !binaries[i] || !device->arch_program_valid_binary_func(device->arch_device, (void *) binaries[i], lengths[i]))
 		{
 			if (binary_status)
 			{
@@ -297,6 +453,7 @@ cl_program clCreateProgramWithBinary(
 			if (errcode_ret)
 				*errcode_ret = CL_INVALID_VALUE;
 			opencl_program_free(program);
+			printf("fail 2\n");
 			return NULL;
 		}
 
@@ -305,13 +462,14 @@ cl_program clCreateProgramWithBinary(
 			continue;
 
 		/* Create the architecture-specific program object. */
+
+		//star -- arch_program is a function pointer for x86 stuff
 		assert(device->arch_program_create_func);
-		arch_program = device->arch_program_create_func(program,
-			device->arch_device, (void *) binaries[i], lengths[i]);
+		arch_program = device->arch_program_create_func(program, device->arch_device, (void *) binaries[i], lengths[i]);
 
 		/* Add pair of architecture-specific program and device to the
 		 * generic program object. */
-		opencl_program_add(program, device, arch_program);
+		opencl_program_add(program, device, arch_program, program_gpu_binary);
 
 		/* Success */
 		if (errcode_ret)
@@ -432,6 +590,8 @@ cl_int clBuildProgram(
 	if (!program->source)
 		return CL_SUCCESS;
 
+	fatal("clBuildProgram(): in runtime why am I here?\n");
+
 	/* Runtime compilation is not supported, but the user can have activated
 	 * environment variable 'M2S_OPENCL_BINARY', which will make the runtime
 	 * load that specific pre-compiled binary. */
@@ -491,7 +651,7 @@ cl_int clBuildProgram(
 
 		/* Add pair of architecture-specific program and device to the
 		 * generic program object. */
-		opencl_program_add(program, device, arch_program);
+		opencl_program_add(program, device, arch_program, 0);
 	
 		/* Show warning */
 		warning("%s: %s: program binary loaded for device '%s'.\n%s",

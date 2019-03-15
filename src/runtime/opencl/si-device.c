@@ -110,8 +110,7 @@ struct opencl_si_device_t *opencl_si_device_create(struct opencl_device_t *paren
 	parent->vendor_id = 0;
 
 	/* Call-back functions for device */
-	parent->arch_device_free_func = (opencl_arch_device_free_func_t)
-			opencl_si_device_free;
+	parent->arch_device_free_func = (opencl_arch_device_free_func_t) opencl_si_device_free;
 
 	parent->arch_device_mem_alloc_func = (opencl_arch_device_mem_alloc_func_t) opencl_si_device_mem_alloc;
 	parent->arch_device_mem_free_func = (opencl_arch_device_mem_free_func_t) opencl_si_device_mem_free;
@@ -124,6 +123,7 @@ struct opencl_si_device_t *opencl_si_device_create(struct opencl_device_t *paren
 	parent->arch_kernel_create_func = (opencl_arch_kernel_create_func_t) opencl_si_kernel_create;
 	parent->arch_kernel_free_func = (opencl_arch_kernel_free_func_t) opencl_si_kernel_free;
 	parent->arch_kernel_set_arg_func = (opencl_arch_kernel_set_arg_func_t) opencl_si_kernel_set_arg;
+	parent->arch_kernel_set_arg_multi_func = (opencl_arch_kernel_set_arg_multi_func_t) opencl_si_kernel_set_arg_multi;
 
 	/* Call-back functions for ND-Range */
 	parent->arch_ndrange_create_func = (opencl_arch_ndrange_create_func_t) opencl_si_ndrange_create;

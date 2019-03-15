@@ -30,6 +30,7 @@
 #include <runtime/opencl/debug.h>
 #include <runtime/opencl/device.h>
 #include <runtime/opencl/kernel.h>
+#include <runtime/opencl/x86-kernel.h>
 #include <runtime/opencl/object.h>
 #include <runtime/opencl/program.h>
 
@@ -74,7 +75,12 @@ void opencl_kernel_free(struct opencl_kernel_t *kernel)
 }
 
 
-struct opencl_kernel_entry_t *opencl_kernel_add(struct opencl_kernel_t *kernel, struct opencl_device_t *device, void *arch_kernel, void *arch_program)
+struct opencl_kernel_entry_t *opencl_kernel_add(
+		struct opencl_kernel_t *kernel,
+		struct opencl_device_t *device,
+		void *arch_kernel,
+		void *arch_program,
+		enum kernel_entry_type_t type)
 {
 	struct opencl_kernel_entry_t *entry;
 
@@ -83,6 +89,8 @@ struct opencl_kernel_entry_t *opencl_kernel_add(struct opencl_kernel_t *kernel, 
 	entry->device = device;
 	entry->arch_kernel = arch_kernel;
 	entry->arch_program = arch_program;
+	entry->kernel_type = type;
+	entry->kernel_args_list = list_create(); //for native kernels
 
 	/* Add entry and return */
 	list_add(kernel->entry_list, entry);
@@ -91,10 +99,93 @@ struct opencl_kernel_entry_t *opencl_kernel_add(struct opencl_kernel_t *kernel, 
 
 
 
-
 /*
  * OpenCL API Functions
  */
+
+cl_kernel clCreateKernelMulti(cl_program program, const char *kernel_name, cl_int *errcode_ret){
+
+
+	struct opencl_kernel_t *kernel = NULL;
+	int index = 0;
+
+	/* Check valid kernel name */
+	if (!kernel_name)
+	{
+		if (errcode_ret)
+			*errcode_ret = CL_INVALID_VALUE;
+		return NULL;
+	}
+
+	/* Check valid program */
+	if (opencl_object_retain(program, OPENCL_OBJECT_PROGRAM, CL_INVALID_VALUE) != CL_SUCCESS)
+	{
+		if (errcode_ret)
+			*errcode_ret = CL_INVALID_PROGRAM;
+		return NULL;
+	}
+
+	/* Create kernel */
+	kernel = opencl_kernel_create();
+	assert(program);
+	kernel->program = program;
+
+	struct opencl_program_entry_t *entry = NULL;
+	struct opencl_device_t *device = NULL;
+
+	void *arch_program = NULL;
+	void *arch_kernel = NULL;
+
+	/* For each device listed in the generic program object, create an
+	 * architecture-specific kernel as well. */
+	LIST_FOR_EACH(program->entry_list, index)
+	{
+		/* Get device and architecture-specific program */
+		entry = list_get(program->entry_list, index);
+		assert(entry);
+
+		device = entry->device;
+		assert(device);
+
+		arch_program = entry->arch_program;
+		assert(arch_program);
+
+		arch_kernel = NULL;
+
+		/* Create architecture-specific kernel */
+		if(entry->arch_program_type == program_gpu_binary)
+		{
+			assert(device->arch_kernel_create_func);
+			arch_kernel = device->arch_kernel_create_func(kernel, arch_program, kernel_name);
+		}
+		else if(entry->arch_program_type == program_cpu_native)
+		{
+			//native kernel, just pass along the func ptr
+			arch_kernel = entry->arch_program;
+		}
+		else
+		{
+			fatal("clCreateKernelMulti(): error\n");
+		}
+
+		if (!arch_kernel)
+		{
+			*errcode_ret = CL_INVALID_KERNEL;
+			return NULL;
+		}
+
+		/* Add new entry to the generic kernel object */
+		opencl_kernel_add(kernel, device, arch_kernel, arch_program, (int)entry->arch_program_type);
+	}
+
+	if (errcode_ret)
+		*errcode_ret = CL_SUCCESS;
+
+	/* Return kernel */
+	return kernel;
+}
+
+
 
 cl_kernel clCreateKernel(cl_program program, const char *kernel_name, cl_int *errcode_ret){
 
@@ -124,8 +215,6 @@ cl_kernel clCreateKernel(cl_program program, const char *kernel_name, cl_int *er
 		return NULL;
 	}
 
-
-
 	/* Create kernel */
 	kernel = opencl_kernel_create();
 	kernel->program = program;
@@ -150,7 +239,7 @@ cl_kernel clCreateKernel(cl_program program, const char *kernel_name, cl_int *er
 		arch_kernel = device->arch_kernel_create_func(kernel, arch_program, kernel_name);
 
 		/* Add new entry to the generic kernel object */
-		opencl_kernel_add(kernel, device, arch_kernel, arch_program);
+		opencl_kernel_add(kernel, device, arch_kernel, arch_program, 0);
 	}
 
 	if (errcode_ret)
@@ -186,6 +275,67 @@ cl_int clReleaseKernel(cl_kernel kernel){
 	opencl_debug("\tkernel = %p", kernel);
 
 	return opencl_object_release(kernel, OPENCL_OBJECT_KERNEL, CL_INVALID_KERNEL);
+}
+
+
+cl_int clSetKernelArgMulti(cl_kernel kernel, cl_device_type device_type, cl_uint arg_index, size_t arg_size, const void *arg_value){
+
+	struct opencl_kernel_entry_t *entry = NULL;
+	cl_int status;
+	int i;
+	opencl_native_kernel_args *arg = NULL;
+	//struct opencl_device_t *device;
+	cl_ulong current_device_type;
+
+	/* Debug */
+	opencl_debug("call '%s'", __FUNCTION__);
+	opencl_debug("\tkernel = %p", kernel);
+	opencl_debug("\targ_index = %d", arg_index);
+	opencl_debug("\ttarg_size = %u", arg_size);
+	opencl_debug("\targ_value = %p", arg_value);
+
+	/* Check valid kernel */
+	if (!opencl_object_verify(kernel, OPENCL_OBJECT_KERNEL))
+		return CL_INVALID_KERNEL;
+
+	/* Set argument for all devices of the same type */
+	LIST_FOR_EACH(kernel->entry_list, i)
+	{
+		entry = list_get(kernel->entry_list, i);
+		clGetDeviceInfo(entry->device, CL_DEVICE_TYPE, sizeof(current_device_type), &current_device_type, NULL);
+
+		//printf("looking for %d got %d\n", (int)device_type, (int)current_device_type);
+
+		if(device_type == CL_DEVICE_TYPE_CPU && device_type == current_device_type)
+		{
+			//this is a native kernel, store the argument in the kernel itself for look up later.
+			arg = (opencl_native_kernel_args *) xmalloc(sizeof(opencl_native_kernel_args));
+			arg->arg_index = arg_index;
+			arg->buffer_size = arg_size;
+			arg->buffer = (void *)arg_value;
+			list_insert(entry->kernel_args_list, arg_index, arg);
+
+			/*printf("Set CPU native kernel arg index %d size %d location 0x%08x top of data 0x%08x\n",
+					arg->arg_index, arg->buffer_size, (unsigned int)&arg->buffer, (unsigned int)arg->buffer);*/
+
+		}
+		else if (device_type == CL_DEVICE_TYPE_GPU && device_type == current_device_type)
+		{
+			assert(entry->device->arch_kernel_set_arg_multi_func);
+			status = entry->device->arch_kernel_set_arg_multi_func(entry->arch_kernel, arg_index, arg_size, (void *) arg_value);
+			if (status != CL_SUCCESS)
+				return status;
+
+			//printf("Set GPU kernel arg index %d size %d location 0x%08x\n", arg_index, arg_size, (unsigned int)arg_value);
+		}
+		/*else
+		{
+			fatal("clSetKernelArgMulti(): bad combo\n");
+		}*/
+	}
+
+	/* Success */
+	return CL_SUCCESS;
 }
 
 
@@ -294,6 +444,25 @@ cl_int clGetKernelWorkGroupInfo(
 	return 0;
 }
 
+struct opencl_ndrange_t *opencl_single_ndrange_create(
+	struct opencl_device_t *device,
+	void *arch_kernel,
+	unsigned int work_dim,
+	unsigned int *global_work_offset,
+	unsigned int *global_work_size,
+	unsigned int *local_work_size){
+
+	struct opencl_ndrange_t *ndrange;
+	/*struct opencl_kernel_entry_t *kernel_entry;*/
+
+	ndrange = xcalloc(1, sizeof(struct opencl_ndrange_t));
+	ndrange->device = device;
+	ndrange->arch_kernel = arch_kernel;
+	ndrange->arch_ndrange = device->arch_ndrange_create_func(ndrange, arch_kernel, work_dim, global_work_offset, global_work_size, local_work_size, 0);
+
+	return ndrange;
+}
+
 struct opencl_ndrange_t *opencl_ndrange_create(
 	struct opencl_device_t *device,
 	struct opencl_kernel_t *kernel,
@@ -320,14 +489,21 @@ struct opencl_ndrange_t *opencl_ndrange_create(
 
 	opencl_debug("[%s] creating an nd-range for %s", __FUNCTION__, device->name);
 
+
 	LIST_FOR_EACH(kernel->entry_list, i)
 	{
+
+
 		kernel_entry = list_get(kernel->entry_list, i);
 		if (kernel_entry->device == device)
 			arch_kernel = kernel_entry->arch_kernel;
+
+
 	}
+
 	assert(arch_kernel);
 
+	//printf("ARGs to GPU work_dim %d, GWS %d, LWS %d\n", work_dim, *global_work_size, *local_work_size);
 	ndrange->arch_ndrange = device->arch_ndrange_create_func(ndrange, arch_kernel, work_dim, global_work_offset, global_work_size, local_work_size, 0);
 
 	return ndrange;

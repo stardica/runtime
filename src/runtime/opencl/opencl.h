@@ -35,8 +35,7 @@
  * #define _GNU_SOURCE (notice that this macro is declared in the gcc command
  * line with the '-D' flag, see Makefile.am). */
 #ifndef pthread_setaffinity_np
-int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize,
-		const cpu_set_t *cpuset);
+int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset);
 #endif
 
 
@@ -112,8 +111,6 @@ extern char *opencl_err_param_note;
 	__FUNCTION__, (min), (max), opencl_err_param_note); }
 #define OPENCL_ARG_NOT_SUPPORTED_FLAG(p, flag, name) \
 	{ if ((p) & (flag)) fatal("%s: flag '" name "' not supported\n%s", __FUNCTION__, opencl_err_param_note); }
-
-
 
 
 /*
@@ -211,6 +208,13 @@ typedef void (*opencl_arch_kernel_free_func_t)(
 
 /* Set a kernel argument */
 typedef int (*opencl_arch_kernel_set_arg_func_t)(
+		void *kernel,  /* Of type 'opencl_XXX_kernel_t' */
+		int arg_index,
+		unsigned int arg_size,
+		void *arg_value);
+
+/* Set a kernel argument */
+typedef int (*opencl_arch_kernel_set_arg_multi_func_t)(
 		void *kernel,  /* Of type 'opencl_XXX_kernel_t' */
 		int arg_index,
 		unsigned int arg_size,

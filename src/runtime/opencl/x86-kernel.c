@@ -159,6 +159,8 @@ static void *opencl_x86_kernel_get_func_info(void *dlhandle, const char *func_na
 	*metadata = (size_t *) dlsym(dlhandle, meta_name);
 	addr = dlsym(dlhandle, full_name);
 
+	/*printf("address in file 0x%08x\n", (unsigned int)addr);*/
+
 	free(full_name);
 	free(meta_name);
 	return addr;
@@ -192,16 +194,15 @@ struct opencl_x86_kernel_t *opencl_x86_kernel_create(
 	kernel->parent = parent;
 	kernel->program = program;
 	kernel->device = program->device;
-	kernel->func = opencl_x86_kernel_get_func_info(program->dlhandle,
-			func_name, &kernel->metadata);
+	kernel->func = opencl_x86_kernel_get_func_info(program->dlhandle, func_name, &kernel->metadata);
 
 	/* Check valid kernel function name */
 	if (!kernel->func)
-		fatal("%s: %s: invalid kernel name", __FUNCTION__,
-				func_name);
+		fatal("%s: %s: invalid kernel name", __FUNCTION__, func_name);
 
 	kernel->local_reserved_bytes = kernel->metadata[1];
 	kernel->num_params = (kernel->metadata[0] - 44) / 24;
+
 	opencl_debug("[%s] num params = %d", __FUNCTION__, kernel->num_params);
 	kernel->param_info = xcalloc(1, sizeof kernel->param_info[0] * kernel->num_params);
 	stride = 8;
@@ -214,6 +215,9 @@ struct opencl_x86_kernel_t *opencl_x86_kernel_create(
 
 		param_info = kernel->param_info + i;
 		param_info->arg_type = kernel->metadata[8 + stride * i];
+
+		/*printf("arg type %d\n", param_info->arg_type);*/
+
 		param_info->mem_arg_type = kernel->metadata[8  + stride * i + 1];
 		param_info->is_set = 0;
 		param_info->size = opencl_x86_kernel_get_arg_words(kernel->param_info[i].arg_type);
@@ -248,14 +252,14 @@ struct opencl_x86_kernel_t *opencl_x86_kernel_create(
 			stack_offset += param_info->size;
 		}
 
-		/**
-		printf("Param %d.  Type: %d.  Mem: %d. Size: %d. Offset: %d.\n",
+
+		/*printf("Param %d.  Type: %d.  Mem: %d. Size: %d. Offset: %d.\n",
                        i,
                        kernel->param_info[i].param_type,
                        kernel->param_info[i].mem_type,
 		       kernel->param_info[i].size,
-		       kernel->param_info[i].offset);
-		*/
+		       kernel->param_info[i].offset);*/
+
 	}
 
 	remainder = stack_offset % SSE_REG_SIZE_IN_WORDS;
@@ -267,6 +271,8 @@ struct opencl_x86_kernel_t *opencl_x86_kernel_create(
 	/* Reserve space for stack arguments */
 	kernel->cur_stack_params = xcalloc(kernel->stack_param_words, sizeof(size_t));
 	opencl_debug("[%s] kernel = %p", __FUNCTION__, (void*)kernel);
+	//printf("[%s] kernel = %p\n", __FUNCTION__, (void*)kernel);
+
 
 	/* Return */
 	return kernel;
@@ -282,8 +288,7 @@ void opencl_x86_kernel_free(struct opencl_x86_kernel_t *kernel)
 }
 
 
-int opencl_x86_kernel_set_arg(struct opencl_x86_kernel_t *kernel,
-		int arg_index, unsigned int arg_size, void *arg_value)
+int opencl_x86_kernel_set_arg(struct opencl_x86_kernel_t *kernel, int arg_index, unsigned int arg_size, void *arg_value)
 {
 	struct opencl_x86_kernel_arg_t *param_info;
 
@@ -292,8 +297,7 @@ int opencl_x86_kernel_set_arg(struct opencl_x86_kernel_t *kernel,
 	assert(param_info->size * sizeof(size_t) >= arg_size || !arg_value);
 
 	/* Empty value only allowed for local memory */
-	assert((!arg_value) == (param_info->mem_arg_type
-			== OPENCL_X86_KERNEL_MEM_ARG_LOCAL));
+	assert((!arg_value) == (param_info->mem_arg_type == OPENCL_X86_KERNEL_MEM_ARG_LOCAL));
 
 	/* Different actions for each argument type */
 	if (!arg_value)
@@ -301,13 +305,13 @@ int opencl_x86_kernel_set_arg(struct opencl_x86_kernel_t *kernel,
 		/* Local memory */
 		kernel->cur_stack_params[param_info->stack_offset] = arg_size;
 	}
-	else if (param_info->mem_arg_type == OPENCL_X86_KERNEL_MEM_ARG_GLOBAL
-			|| param_info->mem_arg_type == OPENCL_X86_KERNEL_MEM_ARG_CONSTANT)
+	else if (param_info->mem_arg_type == OPENCL_X86_KERNEL_MEM_ARG_GLOBAL || param_info->mem_arg_type == OPENCL_X86_KERNEL_MEM_ARG_CONSTANT)
 	{
 		void *addr = opencl_mem_get_buffer(*(cl_mem *) arg_value);
 		if (!addr)
 			return CL_INVALID_MEM_OBJECT;
 		memcpy(kernel->cur_stack_params + param_info->stack_offset, &addr, sizeof addr);
+		printf("kernel param 1\n");
 	}
 	else if (param_info->is_stack)
 	{
@@ -316,6 +320,7 @@ int opencl_x86_kernel_set_arg(struct opencl_x86_kernel_t *kernel,
 	else
 	{
 		memcpy(kernel->cur_register_params + param_info->reg_offset, arg_value, arg_size);
+		printf("kernel param 2\n");
 	}
 
 	/* Label argument as set */
@@ -323,39 +328,31 @@ int opencl_x86_kernel_set_arg(struct opencl_x86_kernel_t *kernel,
 	return 0;
 }
 
-struct opencl_x86_ndrange_t *opencl_x86_ndrange_create(
+struct opencl_x86_ndrange_t *opencl_x86_ndrange_create_native(
 	struct opencl_ndrange_t *ndrange,
-	struct opencl_x86_kernel_t *x86_kernel,
 	unsigned int work_dim, unsigned int *global_work_offset,
-	unsigned int *global_work_size, unsigned int *local_work_size,
-	unsigned int fused)
+	unsigned int *global_work_size, unsigned int *local_work_size)
 {
 	int i;
 
 	struct opencl_x86_ndrange_t *arch_ndrange;
 
-	opencl_debug("[%s] creating x86 ndrange", __FUNCTION__);
-	assert(x86_kernel->type == opencl_runtime_type_x86);
+	printf("x86 CPU NDRange Create Native\n");
 
-	arch_ndrange = (struct opencl_x86_ndrange_t *)xcalloc(1, 
-		sizeof(struct opencl_x86_ndrange_t));
+	arch_ndrange = (struct opencl_x86_ndrange_t *)xcalloc(1, sizeof(struct opencl_x86_ndrange_t));
 	arch_ndrange->type = opencl_runtime_type_x86;
 	arch_ndrange->parent = ndrange;
 	arch_ndrange->work_dim = work_dim;
-	arch_ndrange->arch_kernel = x86_kernel;
 
 	/* Work sizes */
 	for (i = 0; i < work_dim; i++)
 	{
-		arch_ndrange->global_work_offset[i] = global_work_offset ?
-			global_work_offset[i] : 0;
+		arch_ndrange->global_work_offset[i] = global_work_offset ? global_work_offset[i] : 0;
 		arch_ndrange->global_work_size[i] = global_work_size[i];
-		arch_ndrange->local_work_size[i] = local_work_size ?
-			local_work_size[i] : 1;
-		assert(!(global_work_size[i] % 
-			arch_ndrange->local_work_size[i]));
-		arch_ndrange->group_count[i] = global_work_size[i] / 
-			arch_ndrange->local_work_size[i];
+		arch_ndrange->local_work_size[i] = local_work_size ? local_work_size[i] : 1;
+		assert(!(global_work_size[i] % arch_ndrange->local_work_size[i]));
+		arch_ndrange->group_count[i] = global_work_size[i] / arch_ndrange->local_work_size[i];
+		printf("GWS %d LWS %d Group_count %d\n", arch_ndrange->global_work_size[i], arch_ndrange->local_work_size[i], arch_ndrange->group_count[i]);
 	}
 
 	/* Unused dimensions */
@@ -368,9 +365,60 @@ struct opencl_x86_ndrange_t *opencl_x86_ndrange_create(
 	}
 
 	/* Calculate the number of work groups in the ND-Range */
-	arch_ndrange->num_groups = arch_ndrange->group_count[0] * 
-		arch_ndrange->group_count[1] * arch_ndrange->group_count[2];
+	arch_ndrange->num_groups = arch_ndrange->group_count[0] * arch_ndrange->group_count[1] * arch_ndrange->group_count[2];
 
+	return arch_ndrange;
+}
+
+
+struct opencl_x86_ndrange_t *opencl_x86_ndrange_create(
+	struct opencl_ndrange_t *ndrange,
+	struct opencl_x86_kernel_t *x86_kernel,
+	unsigned int work_dim, unsigned int *global_work_offset,
+	unsigned int *global_work_size, unsigned int *local_work_size,
+	unsigned int fused)
+{
+	int i;
+
+	struct opencl_x86_ndrange_t *arch_ndrange;
+
+	printf("x86 CPU NDRange Create\n");
+
+	opencl_debug("[%s] creating x86 ndrange", __FUNCTION__);
+	assert(x86_kernel->type == opencl_runtime_type_x86);
+
+	arch_ndrange = (struct opencl_x86_ndrange_t *)xcalloc(1, sizeof(struct opencl_x86_ndrange_t));
+	arch_ndrange->type = opencl_runtime_type_x86;
+	arch_ndrange->parent = ndrange;
+	arch_ndrange->work_dim = work_dim;
+	arch_ndrange->arch_kernel = x86_kernel;
+
+	printf("dims %d\n", arch_ndrange->work_dim);
+
+	/* Work sizes */
+	for (i = 0; i < work_dim; i++)
+	{
+		arch_ndrange->global_work_offset[i] = global_work_offset ? global_work_offset[i] : 0;
+		arch_ndrange->global_work_size[i] = global_work_size[i];
+		arch_ndrange->local_work_size[i] = local_work_size ? local_work_size[i] : 1;
+		assert(!(global_work_size[i] % arch_ndrange->local_work_size[i]));
+		arch_ndrange->group_count[i] = global_work_size[i] / arch_ndrange->local_work_size[i];
+		printf("GWS %d LWS %d Group_count %d\n", arch_ndrange->global_work_size[i], arch_ndrange->local_work_size[i], arch_ndrange->group_count[i]);
+	}
+
+	/* Unused dimensions */
+	for (i = work_dim; i < 3; i++)
+	{
+		arch_ndrange->global_work_offset[i] = 0;
+		arch_ndrange->global_work_size[i] = 1;
+		arch_ndrange->local_work_size[i] = 1;
+		arch_ndrange->group_count[i] = 1;
+	}
+
+	/* Calculate the number of work groups in the ND-Range */
+	arch_ndrange->num_groups = arch_ndrange->group_count[0] * arch_ndrange->group_count[1] * arch_ndrange->group_count[2];
+
+	printf("total number groups %d\n", arch_ndrange->num_groups);
 
 	/* Check that all arguments are set */
 	for (i = 0; i < x86_kernel->num_params; i++)
@@ -382,10 +430,8 @@ struct opencl_x86_ndrange_t *opencl_x86_ndrange_create(
 
 
 	opencl_debug("[%s] dims = %d", __FUNCTION__, work_dim);
-	opencl_debug("[%s] local size = (%d, %d, %d)", __FUNCTION__,
-		arch_ndrange->local_work_size[0], arch_ndrange->local_work_size[1], arch_ndrange->local_work_size[2]);
-	opencl_debug("[%s] global size = (%d, %d, %d)", __FUNCTION__,
-		global_work_size[0], global_work_size[1], global_work_size[2]);
+	opencl_debug("[%s] local size = (%d, %d, %d)", __FUNCTION__, arch_ndrange->local_work_size[0], arch_ndrange->local_work_size[1], arch_ndrange->local_work_size[2]);
+	opencl_debug("[%s] global size = (%d, %d, %d)", __FUNCTION__, global_work_size[0], global_work_size[1], global_work_size[2]);
 
 	/* copy over register arguments */
 	size_t reg_size = sizeof x86_kernel->cur_register_params[0] * MAX_SSE_REG_PARAMS;
@@ -393,15 +439,18 @@ struct opencl_x86_ndrange_t *opencl_x86_ndrange_create(
 		fatal("%s: could not allocate aligned memory", __FUNCTION__);
 	mhandle_register_ptr(arch_ndrange->register_params, reg_size);
 	memcpy(arch_ndrange->register_params, x86_kernel->cur_register_params, reg_size);
+	assert(arch_ndrange->register_params);
 
 	/* copy over stack arguments */
 	arch_ndrange->stack_params = xmalloc(x86_kernel->stack_param_words * sizeof(size_t));
 	if (!arch_ndrange->stack_params)
 		fatal("%s: out of memory", __FUNCTION__);
 	memcpy(arch_ndrange->stack_params, x86_kernel->cur_stack_params, x86_kernel->stack_param_words * sizeof (size_t));
-	
+	assert(arch_ndrange->stack_params);
+
 	return arch_ndrange;
 }
+
 /* Initialize an ND-Range */
 void opencl_x86_ndrange_init(struct opencl_x86_ndrange_t *ndrange)
 {
@@ -413,6 +462,7 @@ void opencl_x86_ndrange_init(struct opencl_x86_ndrange_t *ndrange)
 #ifndef HAVE_SYNC_BUILTINS
 	pthread_mutex_init(&exec->next_group_lock, NULL);
 #endif
+
 	exec->ndrange = ndrange;
 	exec->kernel = ndrange->arch_kernel;
 	ndrange->exec = exec;
@@ -422,15 +472,16 @@ void opencl_x86_ndrange_init(struct opencl_x86_ndrange_t *ndrange)
 void opencl_x86_ndrange_free(struct opencl_x86_ndrange_t *ndrange)
 {
 	opencl_debug("[%s] freeing x86 ndrange", __FUNCTION__);
+
 #ifndef HAVE_SYNC_BUILTINS
 	pthread_mutex_destroy(&ndrange->exec->next_group_lock);
 #endif
+
 	free(ndrange->exec);
 }
 
-void opencl_x86_ndrange_run_partial(struct opencl_x86_ndrange_t *ndrange, 
-	unsigned int *work_group_start, unsigned int *work_group_count)
-{
+void opencl_x86_ndrange_run_partial(struct opencl_x86_ndrange_t *ndrange, unsigned int *work_group_start, unsigned int *work_group_count){
+
 	struct opencl_x86_device_exec_t *exec = ndrange->exec;
 	struct opencl_x86_device_t *device = ndrange->arch_kernel->device;
 	int i = 0;
@@ -440,13 +491,16 @@ void opencl_x86_ndrange_run_partial(struct opencl_x86_ndrange_t *ndrange,
 	opencl_debug("[%s] group count = (%d, %d, %d)", __FUNCTION__, work_group_count[0], work_group_count[1], work_group_count[2]);
 
 	memcpy(exec->work_group_start, work_group_start, sizeof (unsigned int) * 3);
+
 	memcpy(exec->work_group_count, work_group_count, sizeof (unsigned int) * 3);
 
 	exec->num_groups = 1;
 	for (i = 0; i < 3; i++)
 		exec->num_groups *= work_group_count[i];
 
-	/* we can use the queue thread a a worker thread, but we should set it's affinity */
+	printf("exec->num_groups %d\n", exec->num_groups);
+
+	/* we can use the queue thread as a worker thread, but we should set it's affinity */
 	if (!device->set_queue_affinity)
 	{
 		cpu_set_t cpu_set;
@@ -457,10 +511,15 @@ void opencl_x86_ndrange_run_partial(struct opencl_x86_ndrange_t *ndrange,
 	}
 
 	device->exec = exec;
+
 	opencl_x86_device_sync_post(&device->work_ready);
+
 	opencl_x86_device_run_exec(&device->queue_core, exec);
+
 	device->core_done_count += device->num_cores - 1;
+
 	opencl_x86_device_sync_wait(&device->cores_done, device->core_done_count);
+
 }
 
 /* Run an ND-Range */
@@ -468,10 +527,11 @@ void opencl_x86_ndrange_run(struct opencl_x86_ndrange_t *ndrange)
 {
 	unsigned int group_start[3] = {0, 0, 0};
 
+	printf("In X86 Kernel run func\n");
+
 	opencl_x86_ndrange_init(ndrange);
 
-	opencl_x86_ndrange_run_partial(ndrange, group_start, 
-		ndrange->group_count);
+	opencl_x86_ndrange_run_partial(ndrange, group_start, ndrange->group_count);
 
 	opencl_x86_ndrange_free(ndrange);
 }

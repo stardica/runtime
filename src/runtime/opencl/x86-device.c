@@ -17,6 +17,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <stdio.h>
 #include <assert.h>
 #include <limits.h>
 
@@ -215,8 +216,7 @@ void opencl_x86_device_barrier(int data)
 /* We need a variable holding the address of the barrier function. The address
  * of this variable is kept in the work-item data structure. */
 typedef void (*opencl_x86_device_barrier_func_t)(int user_data);
-static opencl_x86_device_barrier_func_t opencl_x86_device_barrier_func
-		= opencl_x86_device_barrier;
+static opencl_x86_device_barrier_func_t opencl_x86_device_barrier_func = opencl_x86_device_barrier;
 
 
 //star todo investigate these two functions.
@@ -267,21 +267,24 @@ void opencl_x86_device_init_work_item(int i, struct opencl_x86_device_core_t *co
 
 	memcpy(stack_top, core->stack_params, arg_size);
 	fiber->eip = opencl_x86_work_item_entry_point;
+	/*fiber->eip = 0x0;*/
+
+	printf("fiber->eip address is 0x%08x\n", (unsigned int)fiber->eip);
+
 	fiber->esp = stack_top - sizeof (size_t);
 	*(size_t *) fiber->esp = (size_t) opencl_x86_device_exit_fiber;
 } 
 
-void opencl_x86_device_work_group_init(
-	struct opencl_x86_device_core_t *work_group,
-	struct opencl_x86_device_exec_t *e)
-{
+void opencl_x86_device_work_group_init(struct opencl_x86_device_core_t *work_group, struct opencl_x86_device_exec_t *e){
+
 	int i;
 	struct opencl_x86_ndrange_t *nd = e->ndrange;
-
 
 	work_group->num_items = 1;
 	for (i = 0; i < nd->work_dim; i++)
 		work_group->num_items *= e->ndrange->local_work_size[i];
+
+	printf("word dim items %d\n", work_group->num_items);
 
 	work_group->register_params = nd->register_params;
 	work_group->kernel_fn = nd->arch_kernel->func;
@@ -294,31 +297,30 @@ void opencl_x86_device_work_group_init(
 	/* set up params with local memory pointers sperate from those of other threads */
 	work_group->stack_params = (size_t *) xmalloc(sizeof (size_t) * e->kernel->stack_param_words);
 	memcpy(work_group->stack_params, e->ndrange->stack_params, sizeof (size_t) * e->kernel->stack_param_words);
+
 	for (i = 0; i < e->kernel->num_params; i++)
+	{
 		if (e->kernel->param_info[i].mem_arg_type == OPENCL_X86_KERNEL_MEM_ARG_LOCAL)
 		{
 			int offset = e->kernel->param_info[i].stack_offset;
-			if (posix_memalign((void **) (work_group->stack_params + offset),
-					OPENCL_WORK_GROUP_STACK_ALIGN, e->ndrange->stack_params[offset]))
+			if (posix_memalign((void **) (work_group->stack_params + offset), OPENCL_WORK_GROUP_STACK_ALIGN, e->ndrange->stack_params[offset]))
 				fatal("%s: out of memory", __FUNCTION__);
-			mhandle_register_ptr(*(void **) (work_group->stack_params + offset),
-					e->ndrange->stack_params[offset]);
+			mhandle_register_ptr(*(void **) (work_group->stack_params + offset), e->ndrange->stack_params[offset]);
 		}
+	}
 }
 
 
 /* Blocking call to execute a work-group.
  * This code is function is run from within a core-assigned runtime thread */
-void opencl_x86_device_work_group_launch(
-	int num,
-	struct opencl_x86_device_exec_t *exec,
-	struct opencl_x86_device_core_t *core)
-{
+void opencl_x86_device_work_group_launch(int num, struct opencl_x86_device_exec_t *exec, struct opencl_x86_device_core_t *core){
+
 	const unsigned int *local_size = exec->ndrange->local_work_size;
 	struct opencl_x86_ndrange_t *nd = exec->ndrange;
 	int i = 0;
 
 	opencl_nd_address(nd->work_dim, num, exec->work_group_count, core->group_id);
+
 	for (i = 0; i < 3; i++)
 		core->group_global[i] = (core->group_id[i] + exec->work_group_start[i]) * local_size[i] + nd->global_work_offset[i];
 	
@@ -396,10 +398,8 @@ void opencl_x86_device_core_treardown(struct opencl_x86_device_core_t *work_grou
 }
 
 
-void opencl_x86_device_run_exec(
-	struct opencl_x86_device_core_t *core,
-	struct opencl_x86_device_exec_t *exec)
-{
+void opencl_x86_device_run_exec(struct opencl_x86_device_core_t *core, struct opencl_x86_device_exec_t *exec){
+
 	/* Initialize kernel data */
 	opencl_x86_device_work_group_init(core, exec);
 
@@ -492,8 +492,8 @@ void opencl_x86_device_sync_post(struct opencl_x86_device_sync_t *sync)
 struct opencl_x86_device_t *opencl_x86_device_create(struct opencl_device_t *parent)
 {
 	struct opencl_x86_device_t *device;
-	int err;
-	int i;
+	/*int err;
+	int i;*/
 
 	/* Initialize */
 	device = xcalloc(1, sizeof(struct opencl_x86_device_t));
@@ -506,9 +506,7 @@ struct opencl_x86_device_t *opencl_x86_device_create(struct opencl_device_t *par
 	device->core_done_count = 0;
 	device->set_queue_affinity = 0;
 
-
-
-
+	/*printf("making cpu device\n");*/
 
 	/* Initialize parent device */
 	parent->address_bits = 8 * sizeof (void *);
@@ -581,90 +579,53 @@ struct opencl_x86_device_t *opencl_x86_device_create(struct opencl_device_t *par
 	parent->type = CL_DEVICE_TYPE_CPU;
 	parent->vendor_id = 0;
 
-
-
 	/* Call-back functions for architecture-specific device */
-	parent->arch_device_free_func =
-			(opencl_arch_device_free_func_t)
-			opencl_x86_device_free;
-	parent->arch_device_mem_alloc_func =
-			(opencl_arch_device_mem_alloc_func_t)
-			opencl_x86_device_mem_alloc;
-	parent->arch_device_mem_free_func =
-			(opencl_arch_device_mem_free_func_t)
-			opencl_x86_device_mem_free;
-	parent->arch_device_mem_read_func =
-			(opencl_arch_device_mem_read_func_t)
-			opencl_x86_device_mem_read;
-	parent->arch_device_mem_write_func =
-			(opencl_arch_device_mem_write_func_t)
-			opencl_x86_device_mem_write;
-	parent->arch_device_mem_copy_func =
-			(opencl_arch_device_mem_copy_func_t)
-			opencl_x86_device_mem_copy;
-	parent->arch_device_preferred_workgroups_func =
-			(opencl_arch_device_preferred_workgroups_func_t)
-			opencl_x86_device_preferred_workgroups;
+	parent->arch_device_free_func = (opencl_arch_device_free_func_t) opencl_x86_device_free;
+	parent->arch_device_mem_alloc_func = (opencl_arch_device_mem_alloc_func_t) opencl_x86_device_mem_alloc;
+	parent->arch_device_mem_free_func = (opencl_arch_device_mem_free_func_t) opencl_x86_device_mem_free;
+	parent->arch_device_mem_read_func = (opencl_arch_device_mem_read_func_t) opencl_x86_device_mem_read;
+	parent->arch_device_mem_write_func = (opencl_arch_device_mem_write_func_t) opencl_x86_device_mem_write;
+	parent->arch_device_mem_copy_func = (opencl_arch_device_mem_copy_func_t) opencl_x86_device_mem_copy;
+	parent->arch_device_preferred_workgroups_func = (opencl_arch_device_preferred_workgroups_func_t) opencl_x86_device_preferred_workgroups;
 
 	/* Call-back functions for architecture-specific program */
-	parent->arch_program_create_func =
-			(opencl_arch_program_create_func_t)
-			opencl_x86_program_create;
-	parent->arch_program_free_func =
-			(opencl_arch_program_free_func_t)
-			opencl_x86_program_free;
-	parent->arch_program_valid_binary_func =
-			opencl_x86_program_valid_binary;
+	parent->arch_program_create_func = (opencl_arch_program_create_func_t) opencl_x86_program_create;
+	parent->arch_program_free_func = (opencl_arch_program_free_func_t) opencl_x86_program_free;
+	parent->arch_program_valid_binary_func = opencl_x86_program_valid_binary;
 
 	/* Call-back functions for architecture-specific kernel */
-	parent->arch_kernel_create_func =
-			(opencl_arch_kernel_create_func_t)
-			opencl_x86_kernel_create;
-	parent->arch_kernel_free_func =
-			(opencl_arch_kernel_free_func_t)
-			opencl_x86_kernel_free;
-	parent->arch_kernel_set_arg_func =
-			(opencl_arch_kernel_set_arg_func_t)
-			opencl_x86_kernel_set_arg;
+	parent->arch_kernel_create_func = (opencl_arch_kernel_create_func_t) opencl_x86_kernel_create;
+	parent->arch_kernel_free_func = (opencl_arch_kernel_free_func_t) opencl_x86_kernel_free;
+	parent->arch_kernel_set_arg_func = (opencl_arch_kernel_set_arg_func_t) opencl_x86_kernel_set_arg;
 
 	/* Call-back functions for architecture-specific ND-Range */
-	parent->arch_ndrange_create_func =
-			(opencl_arch_ndrange_create_func_t)
-			opencl_x86_ndrange_create;
-	parent->arch_ndrange_free_func =
-			(opencl_arch_ndrange_free_func_t)
-			opencl_x86_ndrange_free;
-	parent->arch_ndrange_init_func =
-			(opencl_arch_ndrange_init_func_t)
-			opencl_x86_ndrange_init;
-	parent->arch_ndrange_run_func =
-			(opencl_arch_ndrange_run_func_t)
-			opencl_x86_ndrange_run;
-	parent->arch_ndrange_run_partial_func =
-			(opencl_arch_ndrange_run_partial_func_t)
-			opencl_x86_ndrange_run_partial;
-
-
-
+	parent->arch_ndrange_create_func = (opencl_arch_ndrange_create_func_t) opencl_x86_ndrange_create;
+		parent->arch_ndrange_free_func = (opencl_arch_ndrange_free_func_t) opencl_x86_ndrange_free;
+	parent->arch_ndrange_init_func = (opencl_arch_ndrange_init_func_t) opencl_x86_ndrange_init;
+	parent->arch_ndrange_run_func = (opencl_arch_ndrange_run_func_t) opencl_x86_ndrange_run;
+	parent->arch_ndrange_run_partial_func = (opencl_arch_ndrange_run_partial_func_t)opencl_x86_ndrange_run_partial;
 
 	/* Initialize threads */
 	device->threads = xcalloc(device->num_cores, sizeof(pthread_t));
-	for (i = 0; i < device->num_cores - 1; i++)
+
+	//star changed this... We will make a command queue for the CPU now.
+	/*for (i = 0; i < device->num_cores - 1; i++) // <---- old code here
 	{
 		cpu_set_t cpu_set;
 
-		/* Create thread */
+		 Create thread
 		err = pthread_create(device->threads + i, NULL, (opencl_callback_t) opencl_x86_device_core_func, device);
 		if (err)
 			fatal("%s: could not create thread", __FUNCTION__);
 
-		/* Assign thread to CPU core */
+		 Assign thread to CPU core
 		CPU_ZERO(&cpu_set);
 		CPU_SET(i, &cpu_set);
 		pthread_setaffinity_np(device->threads[i], sizeof cpu_set, &cpu_set);
-	}
 
-	//printf("made it here\n");
+		printf("making mah threads!\n");
+	}*/
+
 
 	opencl_x86_device_core_init(&device->queue_core);
 
@@ -682,12 +643,14 @@ void opencl_x86_device_free(struct opencl_x86_device_t *device)
 }
 
 
-void *opencl_x86_device_mem_alloc(struct opencl_x86_device_t *device, unsigned int size)
+void *opencl_x86_device_mem_alloc(struct opencl_x86_device_t *device, unsigned int size, void *host)
 {
-	void *ptr = NULL;
+	void *ptr = host;
 
-	if (posix_memalign(&ptr, 16, size))
-		fatal("%s: out of memory", __FUNCTION__);
+	printf(" ptr 0x%08x host 0x%08x\n", (unsigned int)ptr, (unsigned int)host);
+
+	/*if (posix_memalign(&ptr, 16, size))
+		fatal("%s: out of memory", __FUNCTION__);*/
 	mhandle_register_ptr(ptr, size);
 	return ptr;
 }

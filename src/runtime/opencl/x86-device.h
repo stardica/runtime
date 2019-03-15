@@ -48,9 +48,11 @@ struct opencl_x86_device_exec_t
 	unsigned int work_group_count[3];
 
 	int num_groups;
+
 #ifndef HAVE_SYNC_BUILTINS
 	pthread_mutex_t next_group_lock;
 #endif
+
 	volatile int next_group;
 };
 
@@ -92,8 +94,6 @@ struct opencl_x86_device_core_t
 	struct opencl_x86_device_fiber_t main_fiber;
 	struct opencl_x86_device_fiber_t work_fibers[X86_MAX_WORK_GROUP_SIZE];
 	struct opencl_x86_device_work_item_data_t *work_item_data[X86_MAX_WORK_GROUP_SIZE];
-
-
 };
 
 struct opencl_x86_device_sync_t
@@ -137,12 +137,15 @@ struct opencl_x86_device_t *opencl_x86_device_create(struct opencl_device_t *par
 void opencl_x86_device_free(struct opencl_x86_device_t *device);
 int opencl_x86_device_preferred_workgroups(struct opencl_x86_device_t *device);
 
-void *opencl_x86_device_mem_alloc(struct opencl_x86_device_t *device, unsigned int size);
+void *opencl_x86_device_mem_alloc(struct opencl_x86_device_t *device, unsigned int size, void *host);
 void opencl_x86_device_mem_free(struct opencl_x86_device_t *device, void *ptr);
 void opencl_x86_device_mem_read(struct opencl_x86_device_t *device, void *host_ptr, void *device_ptr, unsigned int size);
 void opencl_x86_device_mem_write(struct opencl_x86_device_t *device, void *device_ptr, void *host_ptr, unsigned int size);
 void opencl_x86_device_mem_copy(struct opencl_x86_device_t *device, void *device_dest_ptr, void *device_src_ptr, unsigned int size);
 
+void opencl_x86_device_switch_fiber(volatile struct opencl_x86_device_fiber_t *current, volatile struct opencl_x86_device_fiber_t *dest);
+
+void opencl_x86_work_item_entry_point(void);
 void opencl_x86_device_switch_fiber(volatile struct opencl_x86_device_fiber_t *current, volatile struct opencl_x86_device_fiber_t *dest);
 
 void opencl_x86_device_exit_fiber(void);

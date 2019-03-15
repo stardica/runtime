@@ -82,6 +82,44 @@ void *opencl_mem_get_buffer(struct opencl_mem_t *mem)
  * OpenCL API Functions
  */
 
+//this version assumes a fully coherent memory system
+cl_mem clCreateMemObject(cl_context context, size_t size, void *host_ptr, cl_int *errcode_ret)
+{
+	if(!host_ptr && errcode_ret)
+	{
+		*errcode_ret = CL_INVALID_HOST_PTR;
+		return NULL;
+	}
+
+	/* Create memory object */
+	assert(context);
+	assert(host_ptr);
+	assert(size);
+
+	//star added link here.
+	struct opencl_mem_t *mem = opencl_mem_create();
+	mem->mem_type = coherent;
+	mem->use_host_ptr = 1;
+	//mem->device = list_get(context->device_list, 0); //star removed this, use the device listed in the kernel
+	mem->size = size;
+	mem->device_ptr = mem->host_ptr = host_ptr; //just go ahead and set them all...
+
+	/*printf("mem->device_ptr 0x%08x mem->host_ptr 0x%08x host_ptr 0x%08x\n",
+			(unsigned int) mem->device_ptr,
+			(unsigned int) mem->host_ptr,
+			(unsigned int) host_ptr);*/
+	//printf("memory size %d\n", mem->size);
+
+		/* Success */
+	if (errcode_ret)
+		*errcode_ret = CL_SUCCESS;
+
+	/* Return memory object */
+	return mem;
+}
+
+
+
 //star made changes here, the cl_bool linked was added.
 cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void *host_ptr, cl_int *errcode_ret, cl_bool linked)
 {
@@ -121,39 +159,49 @@ cl_mem clCreateBuffer(cl_context context, cl_mem_flags flags, size_t size, void 
 	/* Create memory object */
 	mem = opencl_mem_create();
 
-
 	/* Allocate the memory object in the device. */
-	assert(device->arch_device_mem_alloc_func);
-
 	//star added link here.
+	/*mem->use_host_ptr = linked;
+	if(mem->use_host_ptr)
+	{
+		mem->device_ptr = host_ptr;
+		mem->host_ptr = host_ptr;
+		mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size, host_ptr);
+		//printf("OCLCALL putting host_ptr 0x%08x mem_device_ptr 0x%08x\n", (unsigned int) host_ptr, (unsigned int)mem->device_ptr);
+	}*/
 	if(linked)
 	{
 		mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size, host_ptr);
-		//printf("OCLCALL putting host_ptr 0x%08x\n", (unsigned int) host_ptr);
+		//printf("OCLCALL putting host_ptr 0x%08x mem_device_ptr 0x%08x\n", (unsigned int) host_ptr, (unsigned int)mem->device_ptr);
 	}
 	else
 	{
+		assert(device->arch_device_mem_alloc_func);
 		mem->device_ptr = device->arch_device_mem_alloc_func(device->arch_device, size, NULL);
 	}
 
 	mem->device = device;
 	mem->size = size;
 
+	//printf("memory size %d\n", mem->size);
+
 	/* Save host pointer, if given */
-	//mem->use_host_ptr = (flags & CL_MEM_USE_HOST_PTR) > 0;
 	mem->use_host_ptr = linked;
 	if (mem->use_host_ptr)
 	{
 		mem->host_ptr = host_ptr;
-		/*printf("mem->host_ptr 0x%08x\n", (unsigned int) mem->host_ptr);
-		exit(0);*/
+		printf("mem->host_ptr 0x%08x\n", (unsigned int) mem->host_ptr);
+		/*exit(0);*/
 	}
 
 
 	/* Copy buffer contents */
 	assert(device->arch_device_mem_write_func);
 	if ((flags & CL_MEM_USE_HOST_PTR) || (flags & CL_MEM_COPY_HOST_PTR))
+	{
+		printf("device->arch_device_mem_write_func\n");
 		device->arch_device_mem_write_func(device->arch_device, mem->device_ptr, host_ptr, size);
+	}
 
 	/* Success */
 	if (errcode_ret)

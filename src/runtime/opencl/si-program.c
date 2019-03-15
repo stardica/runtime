@@ -36,20 +36,17 @@ struct opencl_si_program_t *opencl_si_program_create(
 	/* Initialize */
 	program = xcalloc(1, sizeof(struct opencl_si_program_t));
 	program->type = opencl_runtime_type_si;
-	program->elf_file = elf_file_create_from_buffer(binary, length,
-		"Southern Islands Binary");
+	program->elf_file = elf_file_create_from_buffer(binary, length, "Southern Islands Binary");
 
 	/* Create program object in driver */
-	program->id = syscall(OPENCL_SYSCALL_CODE,
-		opencl_abi_si_program_create);
+	program->id = syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_program_create);
 
-	//printf("Prgoram ID read in %ld\n", program->id);
+	//printf("Prgoram ID read in %d\n", program->id);
 	//fflush(stdout);
 	//getchar();
 
 	/* Set program binary in driver */
-	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_program_set_binary,
-		program->id, binary, length);
+	syscall(OPENCL_SYSCALL_CODE, opencl_abi_si_program_set_binary, program->id, binary, length);
 
 	/* Return */
 	return program;
@@ -64,10 +61,11 @@ void opencl_si_program_free(struct opencl_si_program_t *program)
 }
 
 /* Return true is a binary file is a valid SI program binary. */
-int opencl_si_program_valid_binary(void *device, void *binary, 
-	unsigned int length)
+int opencl_si_program_valid_binary(void *device, void *binary, unsigned int length)
 {
 	Elf32_Ehdr *h = (Elf32_Ehdr *) binary;
+
+	printf("opencl_si_program_valid_binary machine 0x%08x\n", h->e_machine);
 
 	return (h->e_machine == 0x3fd ||  /* Tahiti */
 		h->e_machine == 0x3fe ||  /* Pitcairn */

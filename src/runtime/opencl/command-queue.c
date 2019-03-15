@@ -25,6 +25,7 @@
 
 #include <lib/util/list.h>
 #include <lib/util/misc.h>
+#include <lib/util/string.h>
 #include <lib/mhandle/mhandle.h>
 
 #include <runtime/opencl/command.h>
@@ -37,23 +38,87 @@
 #include <runtime/opencl/mem.h>
 #include <runtime/opencl/object.h>
 #include <runtime/opencl/opencl.h>
+#include <runtime/include/CL/cl.h>
+
+
+/*static void *opencl_command_queue_thread_func_multi(void *user_data)
+{
+
+	struct opencl_command_queue_t *command_queue = user_data;
+	struct opencl_command_t *command;
+
+	printf("opencl_command_queue_thread_func_multi()\n");
+
+	 Execute commands sequentially
+	for (;;)
+	{
+		 Get command
+		command = opencl_command_queue_dequeue(command_queue);
+		if (!command)
+		{
+			break;
+		}
+
+		assert(command->command_queue->type == multi);
+		printf("Command queue has a command multi\n");
+
+		 Run it
+		opencl_command_run_multi(command);
+
+		opencl_command_free(command);
+	}
+
+	 End
+	return NULL;
+}*/
+
+void command_queue_set_affinity(int core_id){
+
+   cpu_set_t cpuset;
+   pthread_t thread;
+
+   thread = pthread_self();
+
+   /*Set affinity mask to include CPUs 0 to 7*/
+   CPU_ZERO(&cpuset);
+   CPU_SET(core_id, &cpuset);
+
+   pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+
+   return;
+}
 
 
 static void *opencl_command_queue_thread_func(void *user_data)
 {
-	struct opencl_command_queue_t *command_queue = user_data;
+	struct opencl_command_queue_t *command_queue = (struct opencl_command_queue_t *)user_data;
 	struct opencl_command_t *command;
+
+	/*char DEVICE_NAME[1024];
+	clGetDeviceInfo(command_queue->device, CL_DEVICE_NAME, sizeof(DEVICE_NAME), DEVICE_NAME, NULL);
+	printf("running opencl_command_queue_thread_func for %s\n", DEVICE_NAME);*/
+
+	//put the GPU command queue thread at the end of the CPU's cores
+	/*printf("setting affinity for GPU thread\n");*/
+	if(command_queue->device_type == CL_DEVICE_TYPE_GPU)
+		command_queue_set_affinity(command_queue->host_num_cores - 1);
 
 	/* Execute commands sequentially */
 	for (;;)
 	{
+
 		/* Get command */
 		command = opencl_command_queue_dequeue(command_queue);
 		if (!command)
+		{
 			break;
+		}
+
+		//printf("cqueue %d running\n", command_queue->id);
 
 		/* Run it */
 		opencl_command_run(command);
+
 		opencl_command_free(command);
 	}
 
@@ -62,23 +127,82 @@ static void *opencl_command_queue_thread_func(void *user_data)
 }
 
 
-struct opencl_command_queue_t *opencl_command_queue_create(void)
+/*struct opencl_command_queue_t *opencl_command_queue_create_multi(void)
 {
 	struct opencl_command_queue_t *command_queue;
 
-	/* Initialize */
+	 Initialize
 	command_queue = xcalloc(1, sizeof(struct opencl_command_queue_t));
 	command_queue->command_list = list_create();
 	pthread_mutex_init(&command_queue->lock, NULL);
 	pthread_cond_init(&command_queue->cond_process, NULL);
 
+	 Create thread associated with command queue
+	pthread_create(&command_queue->queue_thread, NULL, opencl_command_queue_thread_func_multi, command_queue);
+
+	 Register OpenCL object
+	opencl_object_create(command_queue, OPENCL_OBJECT_COMMAND_QUEUE, (opencl_object_free_func_t) opencl_command_queue_free);
+
+	 Return
+	return command_queue;
+}*/
+
+/* Return the number of cores in the host CPU in order to decide the number of
+ * threads to spawn running work-groups. */
+static int opencl_x86_device_get_num_cores(void)
+{
+	char s[MAX_LONG_STRING_SIZE];
+	int num_cores = 0;
+	FILE *f;
+
+	/* Get this information from /proc/cpuinfo */
+	f = fopen("/proc/cpuinfo", "rt");
+	if (!f)
+		fatal("%s: cannot access /proc/cpuinfo", __FUNCTION__);
+
+	/* Count entries starting with token 'processor' */
+	while (fgets(s, sizeof s, f))
+	{
+		strtok(s, "\n\t :");
+		if (!strcmp(s, "processor"))
+			num_cores++;
+	}
+
+	/* Done */
+	fclose(f);
+	return num_cores;
+}
+
+int queue_id = 0;
+
+struct opencl_command_queue_t *opencl_command_queue_create(cl_device_id device, cl_command_queue_properties properties)
+{
+	struct opencl_command_queue_t *command_queue;
+
+	/* Initialize */
+	command_queue = xcalloc(1, sizeof(struct opencl_command_queue_t));
+	command_queue->id = queue_id++;
+	command_queue->command_list = list_create();
+	command_queue->device = device;
+	command_queue->properties = properties;
+	command_queue->num_devices = 1;
+	pthread_mutex_init(&command_queue->lock, NULL);
+	pthread_cond_init(&command_queue->cond_process, NULL);
+
+	char device_name[1024];
+	cl_ulong device_type;
+	clGetDeviceInfo(command_queue->device, CL_DEVICE_NAME, sizeof(device_name), device_name, NULL);
+	clGetDeviceInfo(command_queue->device, CL_DEVICE_TYPE, sizeof(device_type), &device_type, NULL);
+	printf("Created command queue for %s of type %d max cus %d\n", device_name, (int)device_type, (int)opencl_x86_device_get_num_cores());
+
+	command_queue->device_type = device_type;
+	command_queue->host_num_cores = opencl_x86_device_get_num_cores();
+
 	/* Create thread associated with command queue */
-	pthread_create(&command_queue->queue_thread, NULL,
-		opencl_command_queue_thread_func, command_queue);
+	pthread_create(&command_queue->queue_thread, NULL, opencl_command_queue_thread_func, command_queue);
 
 	/* Register OpenCL object */
-	opencl_object_create(command_queue, OPENCL_OBJECT_COMMAND_QUEUE,
-		(opencl_object_free_func_t) opencl_command_queue_free);
+	opencl_object_create(command_queue, OPENCL_OBJECT_COMMAND_QUEUE, (opencl_object_free_func_t) opencl_command_queue_free);
 
 	/* Return */
 	return command_queue;
@@ -151,8 +275,13 @@ struct opencl_command_t *opencl_command_queue_dequeue(struct opencl_command_queu
 	/* In order to proceed, the list must be processable
 	 * and there must be at least one item present */
 	while (!command_queue->process || !command_queue->command_list->count)
+	{
+		//printf("going to await a command %d\n", command_queue->id);
 		pthread_cond_wait(&command_queue->cond_process, &command_queue->lock);
+	}
 	
+	//printf("I WOKE UP!!! id %d\n", command_queue->id);
+
 	/* Dequeue an item */
 	command = list_remove_at(command_queue->command_list, 0);
 	if (!command_queue->command_list->count)
@@ -180,14 +309,61 @@ struct opencl_command_t *opencl_command_queue_dequeue(struct opencl_command_queu
 }
 
 
-
-
-
-
 /*
  * OpenCL API Functions
  */
+/*cl_command_queue clCreateCommandQueueMulti(
+	cl_context context,
+	cl_uint num_devices,
+	cl_device_id *devices,
+	cl_command_queue_properties properties,
+	cl_int *errcode_ret)
+{
 
+	struct opencl_command_queue_t *command_queue;
+
+	 Check if context is valid
+	if (!opencl_object_verify(context, OPENCL_OBJECT_CONTEXT))
+	{
+		if (errcode_ret)
+			*errcode_ret = CL_INVALID_CONTEXT;
+		return NULL;
+	}
+
+	 Check that context has passed device(s)
+	int i = 0;
+	for(i=0;i<num_devices;i++)
+	{
+		if (!opencl_context_has_device(context, devices[0]))
+		{
+			if (errcode_ret)
+				*errcode_ret = CL_INVALID_DEVICE;
+			return NULL;
+		}
+	}
+
+	 Create command queue
+	command_queue = opencl_command_queue_create_multi();
+	command_queue->device = (void *)devices; //not sure why i need to cast to void *...
+	command_queue->properties = properties;
+	command_queue->type = multi;
+	command_queue->num_devices = num_devices;
+
+	char DEVICE_NAME[1024];
+	for(i=0;i<num_devices;i++)
+	{
+		clGetDeviceInfo(devices[i], CL_DEVICE_NAME, sizeof(DEVICE_NAME), DEVICE_NAME, NULL);
+		printf("device name %s added check\n", DEVICE_NAME);
+	}
+
+	 Success
+	if (errcode_ret)
+		*errcode_ret = CL_SUCCESS;
+
+	 Return command queue
+	return command_queue;
+
+}*/
 
 cl_command_queue clCreateCommandQueue(
 	cl_context context,
@@ -221,9 +397,7 @@ cl_command_queue clCreateCommandQueue(
 	}
 
 	/* Create command queue */
-	command_queue = opencl_command_queue_create();
-	command_queue->device = device;
-	command_queue->properties = properties;
+	command_queue = opencl_command_queue_create(device, properties);
 
 	/* Success */
 	if (errcode_ret)
@@ -754,6 +928,151 @@ cl_int clEnqueueUnmapMemObject(
 	command = opencl_command_create_unmap_buffer(mem, command_queue, event,
 			num_events_in_wait_list, (cl_event *) event_wait_list);
 	opencl_command_queue_enqueue(command_queue, command);
+
+	/* Success */
+	return CL_SUCCESS;
+}
+
+
+cl_int clEnqueueNDRangeKernelMulti(
+	cl_command_queue *command_queue,
+	cl_uint num_devices,
+	cl_kernel kernel,
+	cl_work_space *work_space,
+	cl_uint num_events_in_wait_list,
+	const cl_event *event_wait_list,
+	cl_event *event)
+{
+
+	cl_int status;
+	int i = 0;
+	int j = 0;
+	cl_uint work_dim = work_space[CL_CPU_WORKSPACE].dim;
+
+	//work space for both the CPU and GPU should be the same
+	assert(work_space[CL_CPU_WORKSPACE].dim == work_space[CL_GPU_WORKSPACE].dim);
+
+	/* Check valid command queue */
+	for(i = 0; i < num_devices; i ++)
+	{
+		if (!opencl_object_verify(command_queue[i], OPENCL_OBJECT_COMMAND_QUEUE))
+			return CL_INVALID_COMMAND_QUEUE;
+	}
+
+	/* Check valid kernel */
+	if (!opencl_object_verify(kernel, OPENCL_OBJECT_KERNEL))
+		return CL_INVALID_KERNEL;
+
+	/* Check valid events */
+	status = opencl_event_wait_list_check(num_events_in_wait_list, event_wait_list);
+	if (status != CL_SUCCESS)
+		return status;
+
+	/* Check valid work dimensions */
+	if (!IN_RANGE(work_dim, 1, 3))
+		return CL_INVALID_WORK_DIMENSION;
+
+	/* Global size is NULL */
+	if (!work_space)
+		return CL_INVALID_GLOBAL_WORK_SIZE;
+
+	/* Invalid global size components */
+	for (i = 0; i < work_dim; i++)
+		if (!work_space[CL_GPU_WORKSPACE].GWS[i])
+			return CL_INVALID_GLOBAL_WORK_SIZE;
+
+	/* Invalid local size components*/
+	for (i = 0; i < work_dim; i++)
+	{
+		if (!work_space[CL_GPU_WORKSPACE].LWS[i])
+		{
+			fatal("clEnqueueNDRangeKernelMulti(): specifiy an LWS. FIX ME LATER\n");
+			return CL_INVALID_WORK_GROUP_SIZE;
+		}
+
+		/* Global size not evenly divisible */
+		if (work_space[CL_GPU_WORKSPACE].GWS[i] % work_space[CL_GPU_WORKSPACE].LWS[i])
+			return CL_INVALID_WORK_GROUP_SIZE;
+	}
+
+
+	//void *device_kernel = NULL;
+	struct opencl_kernel_entry_t *entry = NULL;
+	struct opencl_device_t *device;
+	struct opencl_command_t *command;
+	cl_ulong command_queue_device_type;
+	cl_ulong kernel_device_type;
+
+	//for(i = 0; i < num_devices; i++)
+	for(i = num_devices - 1 ; i >= 0; i--)
+	{
+
+		command = NULL;
+		j = 0;
+
+		device = command_queue[i]->device;
+		clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(command_queue_device_type), &command_queue_device_type, NULL);
+
+		switch(command_queue_device_type)
+		{
+
+			case CL_DEVICE_TYPE_CPU:
+
+				do
+				{
+					entry = list_get(kernel->entry_list, j);
+					clGetDeviceInfo(entry->device, CL_DEVICE_TYPE, sizeof(kernel_device_type), &kernel_device_type, NULL);
+
+					//printf("looking for %d got %d\n", (int)command_queue_device_type, (int)kernel_device_type);
+					j++;
+				}while(kernel_device_type != command_queue_device_type);
+				//assert(kernel_device_type == command_queue_device_type);
+
+				//create the command
+				command = opencl_command_run_native_kernel_init(command_queue[i], event, num_events_in_wait_list, (cl_event *) event_wait_list);
+
+				command->arg_list = entry->kernel_args_list;
+				command->work_space = &work_space[CL_CPU_WORKSPACE];
+				command->ndrange = entry->arch_kernel;
+
+				opencl_command_queue_enqueue(command_queue[i], command);
+
+
+				break;
+
+
+			case CL_DEVICE_TYPE_GPU:
+
+				do
+				{
+					entry = list_get(kernel->entry_list, j);
+					clGetDeviceInfo(entry->device, CL_DEVICE_TYPE, sizeof(kernel_device_type), &kernel_device_type, NULL);
+
+					//printf("looking for %d got %d\n", (int)command_queue_device_type, (int)kernel_device_type);
+					j++;
+				}while(kernel_device_type != command_queue_device_type);
+				//assert(kernel_device_type == command_queue_device_type);
+
+				//Initialize an ocl command
+				command = opencl_command_run_ndrage_init(command_queue[i], event, num_events_in_wait_list, (cl_event *) event_wait_list);
+				command->ndrange = opencl_single_ndrange_create(device, entry->arch_kernel, work_dim,
+						(unsigned int *) work_space[CL_GPU_WORKSPACE].GWO,
+						(unsigned int *) work_space[CL_GPU_WORKSPACE].GWS,
+						(unsigned int *) work_space[CL_GPU_WORKSPACE].LWS);
+
+				opencl_command_queue_enqueue(command_queue[i], command);
+
+				break;
+
+			case CL_DEVICE_TYPE_DEFAULT:
+			case CL_DEVICE_TYPE_ACCELERATOR:
+			case CL_DEVICE_TYPE_CUSTOM:
+			case CL_DEVICE_TYPE_ALL:
+				fatal("clEnqueueNDRangeKernelMulti): bad device type\n");
+				break;
+		}
+	}
+
 
 	/* Success */
 	return CL_SUCCESS;

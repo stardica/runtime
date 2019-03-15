@@ -23,6 +23,13 @@
 #include <runtime/opencl/opencl.h>
 
 
+enum program_entry_type_t{
+	program_gpu_binary = 0,
+	program_cpu_native,
+	program_num_types
+};
+
+
 /* Entry of a program associated with one device type. */
 struct opencl_program_entry_t
 {
@@ -32,6 +39,8 @@ struct opencl_program_entry_t
 	/* Architecture-specific program object. The actual type of this
 	 * variable is 'opencl_xxx_program_t'. */
 	void *arch_program;
+
+	enum program_entry_type_t arch_program_type;
 };
 
 
@@ -59,7 +68,7 @@ int opencl_program_has_device(struct opencl_program_t *program, struct opencl_de
 
 /* Add a new entry to the program with an architecture-specific program and its
  * associated device. */
-struct opencl_program_entry_t *opencl_program_add(struct opencl_program_t *program, struct opencl_device_t *device, void *arch_program);
+struct opencl_program_entry_t *opencl_program_add(struct opencl_program_t *program, struct opencl_device_t *device, void *arch_program, enum program_entry_type_t type);
 
 
 #endif

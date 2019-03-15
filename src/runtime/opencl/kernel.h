@@ -24,6 +24,11 @@
 
 #include <runtime/opencl/opencl.h>
 
+enum kernel_entry_type_t{
+	kernel_gpu_binary = 0,
+	kernel_cpu_native,
+	kernel_num_types
+};
 
 /* Kernel entries (one per device type). Each entry associated a device with
  * an architecture-specific kernel of type 'opencl_xxx_kernel_t', as well as
@@ -33,16 +38,22 @@ struct opencl_kernel_entry_t
 	struct opencl_device_t *device;
 	void *arch_kernel;  /* Of type 'opencl_xxx_kernel_t' */
 	void *arch_program;  /* Of type 'opencl_xxx_program_t' */
+	enum kernel_entry_type_t kernel_type;
+	struct list_t *kernel_args_list; //for native kernels
 };
+
 
 /* ND-Range object (instantiation of a kernel) */
 struct opencl_ndrange_t
 {
 	struct opencl_device_t *device;
-	struct opencl_kernel_t *kernel;	
+	unsigned int num_devices;
+	struct opencl_kernel_t *kernel;
+	void *arch_kernel; //star added this
 
 	void *arch_ndrange;
 };
+
 
 /* Kernel object */
 struct opencl_kernel_t
@@ -60,9 +71,21 @@ struct opencl_kernel_t *opencl_kernel_create(void);
 void opencl_kernel_free(struct opencl_kernel_t *kernel);
 
 /* Add an architecture-specific kernel associated with a device. */
-struct opencl_kernel_entry_t *opencl_kernel_add(struct opencl_kernel_t *kernel,
-		struct opencl_device_t *device, void *arch_kernel,
-		void *arch_program);
+struct opencl_kernel_entry_t *opencl_kernel_add(
+		struct opencl_kernel_t *kernel,
+		struct opencl_device_t *device,
+		void *arch_kernel,
+		void *arch_program,
+		enum kernel_entry_type_t type);
+
+struct opencl_ndrange_t *opencl_single_ndrange_create(
+	struct opencl_device_t *device,
+	void *arch_kernel,
+	unsigned int work_dim,
+	unsigned int *global_work_offset,
+	unsigned int *global_work_size,
+	unsigned int *local_work_size);
+
 
 struct opencl_ndrange_t *opencl_ndrange_create(
 	struct opencl_device_t *device,
